@@ -1,0 +1,7 @@
+-e file:.
+cook-build
+matplotlib
+jupyterlab
+pip-tools
+pytest
+pytest-cov
