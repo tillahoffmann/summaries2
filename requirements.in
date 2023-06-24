@@ -1,5 +1,6 @@
 -e file:.
 cook-build
+flake8
 matplotlib
 jupyterlab
 pip-tools
