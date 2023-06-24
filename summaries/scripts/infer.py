@@ -14,6 +14,7 @@ from typing import Any, Dict, List, Optional, Type
 from ..algorithm import NearestNeighborAlgorithm
 from ..transformers import as_transformer, MinimumConditionalEntropyTransformer, Transformer
 from ..transformers.base import _DataDependentTransformerMixin
+from .base import resolve_path
 
 
 class Args:
@@ -22,10 +23,6 @@ class Args:
     observed: Path
     output: Path
     transformer_kwargs: Dict[str, Any]
-
-
-def _resolved_path(path: str) -> Path:
-    return Path(path).expanduser().resolve()
 
 
 @dataclass
@@ -62,10 +59,10 @@ def __main__(argv: Optional[List[str]] = None) -> None:
                         help="keyword arguments for the transformer encoded as json")
     parser.add_argument("config", help="inference configuration to run", choices=INFERENCE_CONFIGS)
     parser.add_argument("simulated", help="path to simulated data and parameters",
-                        type=_resolved_path)
+                        type=resolve_path)
     parser.add_argument("observed", help="path to observed data and parameters",
-                        type=_resolved_path)
-    parser.add_argument("output", help="path to output file", type=_resolved_path)
+                        type=resolve_path)
+    parser.add_argument("output", help="path to output file", type=resolve_path)
     args: Args = parser.parse_args(argv)
 
     # Load the data and get the configuration.
