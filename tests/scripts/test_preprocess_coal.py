@@ -5,7 +5,7 @@ from summaries.scripts.preprocess_coal import __main__
 
 def test_preprocess_coal(tmp_path: Path) -> None:
     coaloracle = Path(__file__).parent.parent / "data/coaloracle_sample.csv"
-    splits = {"foo": 3, "bar": 6}
+    splits = {"foo": 3, "bar": 6, "baz": 91}
     argv = [coaloracle, tmp_path, *[f"{split}:{size}" for split, size in splits.items()]]
     __main__(map(str, argv))
 
