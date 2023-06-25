@@ -3,7 +3,9 @@ cook-build
 flake8
 matplotlib
 jupyterlab
+jupytext
 pip-tools
 pandas
 pytest
 pytest-cov
+tqdm

@@ -9,6 +9,7 @@ from sklearn.linear_model import LinearRegression
 from sklearn.neural_network import MLPRegressor
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
+from torch import nn, no_grad
 from typing import Any, Dict, List, Optional, Type
 
 from ..algorithm import NearestNeighborAlgorithm
@@ -31,7 +32,7 @@ class InferenceConfig:
     Configuration for reproducible inference.
     """
     frac: float
-    transformer_cls: Type[Transformer]
+    transformer_cls: Type[Transformer] | str
     transformer_kwargs: Optional[Dict[str, Any]] = None
     preprocessor_cls: Optional[Type[Transformer]] = None
 
@@ -45,6 +46,10 @@ INFERENCE_CONFIGS = {
         MinimumConditionalEntropyTransformer,
         {"frac": COAL_FRAC},
     ),
+    "coal-neural": InferenceConfig(
+        COAL_FRAC,
+        "pickled",
+    )
 }
 
 
@@ -87,7 +92,8 @@ def __main__(argv: Optional[List[str]] = None) -> None:
 
     # If the transformer is data-dependent, we have to handle each observation independently. We can
     # process them as a batch otherwise.
-    if issubclass(config.transformer_cls, _DataDependentTransformerMixin):
+    if isinstance(config.transformer_cls, Type) and \
+            issubclass(config.transformer_cls, _DataDependentTransformerMixin):
         samples = []
         for observed_data in observed["data"]:
             pipeline = _build_pipeline(config, observed_data=observed_data,
@@ -96,9 +102,15 @@ def __main__(argv: Optional[List[str]] = None) -> None:
             samples.append(pipeline.predict([observed_data])[0])
         samples = np.asarray(samples)
     else:
-        pipeline = _build_pipeline(config, **(args.transformer_kwargs or {}))
-        pipeline.fit(simulated["data"], simulated["params"])
-        samples = pipeline.predict(observed["data"])
+        transformer_kwargs = dict(args.transformer_kwargs or {})
+        if config.transformer_cls == "pickled":
+            with open(transformer_kwargs["transformer"], "rb") as fp:
+                transformer: nn.Module = pickle.load(fp)["transformer"]
+            config.transformer_cls = lambda **_: transformer
+        pipeline = _build_pipeline(config, **transformer_kwargs)
+        with no_grad():
+            pipeline.fit(simulated["data"], simulated["params"])
+            samples = pipeline.predict(observed["data"])
 
     with args.output.open("wb") as fp:
         pickle.dump({
