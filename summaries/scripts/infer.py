@@ -27,55 +27,56 @@ class InferenceConfig:
     """
     Base class for inference configurations.
     """
-    def __init__(self, frac: float, is_data_dependent: bool,
-                 preprocessor: Transformer | None = None) -> None:
-        self.frac = frac
-        self.is_data_dependent = is_data_dependent
-        self.preprocessor = preprocessor
+    FRAC: float | None = None
+    IS_DATA_DEPENDENT: bool = False
 
-    def create_transformer(self, args: Args, observed_data: Any | None = None) -> Transformer:
+    def __init__(self, args: Args) -> None:
+        self.args = args
+        assert self.FRAC is not None and 0 < self.FRAC and self.FRAC < 1
+
+    def create_transformer(self, observed_data: Any | None = None) -> Transformer:
         raise NotImplementedError
+
+    def create_preprocessor(self) -> Transformer | None:
+        return None
 
 
 class CoalescentConfig(InferenceConfig):
-    def __init__(self, is_data_dependent: bool = False) -> None:
-        super().__init__(0.01, is_data_dependent)
+    FRAC = 0.01
 
 
 class CoalescentMinimumConditionalEntropyConfig(CoalescentConfig):
-    def __init__(self) -> None:
-        super().__init__(True)
+    IS_DATA_DEPENDENT = True
 
-    def create_transformer(self, args: Args, observed_data: np.ndarray) -> Transformer:
-        return MinimumConditionalEntropyTransformer(observed_data, self.frac)
+    def create_transformer(self, observed_data: np.ndarray) -> Transformer:
+        return MinimumConditionalEntropyTransformer(observed_data, self.FRAC)
 
 
 class CoalescentLinearPosteriorMeanConfig(CoalescentConfig):
-    def create_transformer(self, args: Args, observed_data: Any | None = None) -> Transformer:
+    def create_transformer(self, observed_data: Any | None = None) -> Transformer:
         return PredictorTransformer(LinearRegression())
 
 
 class CoalescentNeuralConfig(CoalescentConfig):
-    def create_transformer(self, args: Args, observed_data: Any | None = None) -> Transformer:
-        with open(args.transformer_kwargs["transformer"], "rb") as fp:
+    def create_transformer(self, observed_data: Any | None = None) -> Transformer:
+        with open(self.args.transformer_kwargs["transformer"], "rb") as fp:
             return pickle.load(fp)["transformer"]
 
 
 INFERENCE_CONFIGS = [
-    CoalescentLinearPosteriorMeanConfig(),
-    CoalescentMinimumConditionalEntropyConfig(),
-    CoalescentNeuralConfig(),
+    CoalescentLinearPosteriorMeanConfig,
+    CoalescentMinimumConditionalEntropyConfig,
+    CoalescentNeuralConfig,
 ]
-INFERENCE_CONFIGS = {config.__class__.__name__: config for config in INFERENCE_CONFIGS}
+INFERENCE_CONFIGS = {config.__name__: config for config in INFERENCE_CONFIGS}
 
 
-def _build_pipeline(args: Args, config: InferenceConfig, observed_data: Any | None = None) \
-        -> Pipeline:
-    transformer = config.create_transformer(args, observed_data=observed_data)
+def _build_pipeline(config: InferenceConfig, observed_data: Any | None = None) -> Pipeline:
+    transformer = config.create_transformer(observed_data=observed_data)
     return Pipeline([
         ("transform", transformer),
         ("standardize", StandardScaler()),
-        ("sample", NearestNeighborAlgorithm(config.frac)),
+        ("sample", NearestNeighborAlgorithm(config.FRAC)),
     ])
 
 
@@ -97,26 +98,26 @@ def __main__(argv: Optional[List[str]] = None) -> None:
         simulated = pickle.load(fp)
     with args.observed.open("rb") as fp:
         observed = pickle.load(fp)
-    config: InferenceConfig = INFERENCE_CONFIGS[args.config]
+    config: InferenceConfig = INFERENCE_CONFIGS[args.config](args)
 
     # If there is a preprocessor, we fit it to the simulated data and then apply it to both
     # datasets. Such a preprocessor can evaluate candidate summary statistics, for example.
-    if config.preprocessor:
-        config.preprocessor.fit(simulated["data"])
-        simulated["data"] = config.preprocessor.transform(simulated["data"])
-        observed["data"] = config.preprocessor.transform(observed["data"])
+    if preprocessor := config.create_preprocessor():
+        preprocessor.fit(simulated["data"])
+        simulated["data"] = preprocessor.transform(simulated["data"])
+        observed["data"] = preprocessor.transform(observed["data"])
 
     # If the transformer is data-dependent, we have to handle each observation independently. We can
     # process them as a batch otherwise.
-    if config.is_data_dependent:
+    if config.IS_DATA_DEPENDENT:
         samples = []
         for observed_data in observed["data"]:
-            pipeline = _build_pipeline(args, config, observed_data)
+            pipeline = _build_pipeline(config, observed_data)
             pipeline.fit(simulated["data"], simulated["params"])
             samples.append(pipeline.predict([observed_data])[0])
         samples = np.asarray(samples)
     else:
-        pipeline = _build_pipeline(args, config)
+        pipeline = _build_pipeline(config)
         with no_grad():
             pipeline.fit(simulated["data"], simulated["params"])
             samples = pipeline.predict(observed["data"])

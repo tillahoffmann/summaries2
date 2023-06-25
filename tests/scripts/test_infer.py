@@ -5,7 +5,7 @@ from pathlib import Path
 import pickle
 import pytest
 from sklearn.linear_model import LinearRegression
-from summaries.scripts.infer import Args, __main__, INFERENCE_CONFIGS, InferenceConfig
+from summaries.scripts.infer import __main__, INFERENCE_CONFIGS, InferenceConfig
 from summaries.scripts.preprocess_coal import __main__ as __main__preprocess_coal
 from summaries.transformers import MinimumConditionalEntropyTransformer, NeuralTransformer, \
     PredictorTransformer, Transformer
@@ -24,24 +24,27 @@ class DummyPreprocessor:
 
 
 class DummyConfig(InferenceConfig):
-    def __init__(self, is_data_dependent: bool, transformer_cls: Type[Transformer], **kwargs: Any) \
-            -> None:
-        super().__init__(0.01, is_data_dependent, DummyPreprocessor())
-        self.transformer_cls = transformer_cls
-        self.kwargs = kwargs
+    FRAC = 0.01
 
-    def create_transformer(self, args: Args, **kwargs) -> Transformer:
-        if not self.is_data_dependent:
-            kwargs.pop("observed_data")
-        return self.transformer_cls(**kwargs, **self.kwargs)
+    def create_preprocessor(self) -> Transformer | None:
+        return DummyPreprocessor()
 
 
-@pytest.mark.parametrize("config", [
-    DummyConfig(False, PredictorTransformer, predictor=LinearRegression()),
-    DummyConfig(True, MinimumConditionalEntropyTransformer, frac=0.01),
-])
+class DummyPredictorConfig(DummyConfig):
+    def create_transformer(self, observed_data: Any | None = None) -> Transformer:
+        return PredictorTransformer(LinearRegression())
+
+
+class DummyMinimumConditionalEntropyConfig(DummyConfig):
+    IS_DATA_DEPENDENT = True
+
+    def create_transformer(self, observed_data: Any | None = None) -> Transformer:
+        return MinimumConditionalEntropyTransformer(observed_data, self.FRAC)
+
+
+@pytest.mark.parametrize("config", [DummyPredictorConfig, DummyMinimumConditionalEntropyConfig])
 def test_infer(simulated_data: np.ndarray, simulated_params: np.ndarray, observed_data: np.ndarray,
-               tmp_path: Path, config: DummyConfig) -> None:
+               tmp_path: Path, config: Type[DummyConfig]) -> None:
     # Create paths and write the data to disk.
     simulated = tmp_path / "simulated.pkl"
     observed = tmp_path / "observed.pkl"
@@ -91,7 +94,7 @@ def test_coal_infer(config_name: str, tmp_path: Path) -> None:
     config = INFERENCE_CONFIGS[config_name]
 
     # We need to increase the fraction of samples to estimate the entropy in this test.
-    with mock.patch.object(config, "frac", 0.1):
+    with mock.patch.object(config, "FRAC", 0.1):
         __main__(map(str, argv))
 
     with output.open("rb") as fp:
