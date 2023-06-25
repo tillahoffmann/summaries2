@@ -4,5 +4,6 @@ flake8
 matplotlib
 jupyterlab
 pip-tools
+pandas
 pytest
 pytest-cov

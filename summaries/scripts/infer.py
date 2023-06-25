@@ -14,6 +14,7 @@ from typing import Any, Dict, List, Optional, Type
 from ..algorithm import NearestNeighborAlgorithm
 from ..transformers import as_transformer, MinimumConditionalEntropyTransformer, Transformer
 from ..transformers.base import _DataDependentTransformerMixin
+from .base import resolve_path
 
 
 class Args:
@@ -24,30 +25,31 @@ class Args:
     transformer_kwargs: Dict[str, Any]
 
 
-def _resolved_path(path: str) -> Path:
-    return Path(path).expanduser().resolve()
-
-
 @dataclass
 class InferenceConfig:
     """
     Configuration for reproducible inference.
     """
-    transformer_cls: Type[Transformer]
     frac: float
+    transformer_cls: Type[Transformer]
     transformer_kwargs: Optional[Dict[str, Any]] = None
     preprocessor_cls: Optional[Type[Transformer]] = None
 
 
+COAL_FRAC = 0.01
 INFERENCE_CONFIGS = {
-    "coal-linear_posterior_mean": InferenceConfig(0.01, as_transformer(LinearRegression)),
-    "coal-nonlinear_posterior_mean": InferenceConfig(0.01, as_transformer(MLPRegressor)),
-    "coal-minimum_conditional_entropy": InferenceConfig(0.01, MinimumConditionalEntropyTransformer),
+    "coal-linear_posterior_mean": InferenceConfig(COAL_FRAC, as_transformer(LinearRegression)),
+    "coal-nonlinear_posterior_mean": InferenceConfig(COAL_FRAC, as_transformer(MLPRegressor)),
+    "coal-minimum_conditional_entropy": InferenceConfig(
+        COAL_FRAC,
+        MinimumConditionalEntropyTransformer,
+        {"frac": COAL_FRAC},
+    ),
 }
 
 
 def _build_pipeline(config: InferenceConfig, **transformer_kwargs: Any) -> Pipeline:
-    transformer = config.transformer_cls(**config.transformer_kwargs, **transformer_kwargs)
+    transformer = config.transformer_cls(**(config.transformer_kwargs or {}), **transformer_kwargs)
     return Pipeline([
         ("transform", transformer),
         ("standardize", StandardScaler()),
@@ -62,10 +64,10 @@ def __main__(argv: Optional[List[str]] = None) -> None:
                         help="keyword arguments for the transformer encoded as json")
     parser.add_argument("config", help="inference configuration to run", choices=INFERENCE_CONFIGS)
     parser.add_argument("simulated", help="path to simulated data and parameters",
-                        type=_resolved_path)
+                        type=resolve_path)
     parser.add_argument("observed", help="path to observed data and parameters",
-                        type=_resolved_path)
-    parser.add_argument("output", help="path to output file", type=_resolved_path)
+                        type=resolve_path)
+    parser.add_argument("output", help="path to output file", type=resolve_path)
     args: Args = parser.parse_args(argv)
 
     # Load the data and get the configuration.
@@ -89,12 +91,12 @@ def __main__(argv: Optional[List[str]] = None) -> None:
         samples = []
         for observed_data in observed["data"]:
             pipeline = _build_pipeline(config, observed_data=observed_data,
-                                       **args.transformer_kwargs)
+                                       **(args.transformer_kwargs or {}))
             pipeline.fit(simulated["data"], simulated["params"])
             samples.append(pipeline.predict([observed_data])[0])
         samples = np.asarray(samples)
     else:
-        pipeline = _build_pipeline(config, **args.transformer_kwargs)
+        pipeline = _build_pipeline(config, **(args.transformer_kwargs or {}))
         pipeline.fit(simulated["data"], simulated["params"])
         samples = pipeline.predict(observed["data"])
 

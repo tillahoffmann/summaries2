@@ -5,6 +5,7 @@ import pickle
 import pytest
 from sklearn.linear_model import LinearRegression
 from summaries.scripts.infer import __main__, INFERENCE_CONFIGS, InferenceConfig
+from summaries.scripts.preprocess_coal import __main__ as __main__preprocess_coal
 from summaries.transformers import as_transformer, MinimumConditionalEntropyTransformer, Transformer
 from typing import Any, Dict, Type
 from unittest import mock
@@ -24,13 +25,12 @@ class TestPreprocessor:
     (MinimumConditionalEntropyTransformer, {"frac": 0.01}),
 ])
 def test_infer(simulated_data: np.ndarray, simulated_params: np.ndarray, observed_data: np.ndarray,
-               latent_params: np.ndarray, tmp_path: Path, transformer_cls: Type[Transformer],
-               transformer_kwargs: Dict[str, Any]) \
-        -> None:
+               tmp_path: Path, transformer_cls: Type[Transformer],
+               transformer_kwargs: Dict[str, Any]) -> None:
     # Set up a dummy configuration.
     config = InferenceConfig(
-        transformer_cls,
         0.01,
+        transformer_cls,
         transformer_kwargs,
         TestPreprocessor,
     )
@@ -59,3 +59,29 @@ def test_infer(simulated_data: np.ndarray, simulated_params: np.ndarray, observe
 
     # Verify the shape of the sample.
     assert result["samples"].shape == (7, 1000, simulated_params.shape[-1])
+
+
+@pytest.mark.parametrize("config", [x for x in INFERENCE_CONFIGS if x.startswith("coal")])
+def test_infer_coal(config: str, tmp_path: Path) -> None:
+    # Split up the data to test and training sets.
+    coaloracle = Path(__file__).parent.parent / "data/coaloracle_sample.csv"
+    __main__preprocess_coal(map(str, [coaloracle, tmp_path, "simulated:98", "observed:2"]))
+
+    output = tmp_path / "output.pkl"
+    argv = [config, tmp_path / "simulated.pkl", tmp_path / "observed.pkl", output]
+
+    def _run():
+        with mock.patch.object(INFERENCE_CONFIGS[config], "frac", 0.1):
+            __main__(map(str, argv))
+
+    # We need to increase the fraction of samples we're taking to estimate the entropy in this test.
+    if issubclass(INFERENCE_CONFIGS[config].transformer_cls, MinimumConditionalEntropyTransformer):
+        with mock.patch.object(INFERENCE_CONFIGS[config], "transformer_kwargs", {"frac": 0.1}):
+            _run()
+    else:
+        _run()
+
+    with output.open("rb") as fp:
+        result = pickle.load(fp)
+
+    assert result["samples"].shape == (2, 9, 2)
