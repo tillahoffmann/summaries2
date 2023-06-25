@@ -318,6 +318,8 @@ tornado==6.3.2
     #   jupyter-server
     #   jupyterlab
     #   terminado
+tqdm==4.65.0
+    # via -r requirements.in
 traitlets==5.9.0
     # via
     #   comm

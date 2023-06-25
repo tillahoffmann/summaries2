@@ -7,3 +7,4 @@ pip-tools
 pandas
 pytest
 pytest-cov
+tqdm
