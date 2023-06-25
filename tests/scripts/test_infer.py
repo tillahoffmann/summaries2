@@ -1,4 +1,5 @@
 from __future__ import annotations
+import json
 import numpy as np
 from pathlib import Path
 import pickle
@@ -6,7 +7,9 @@ import pytest
 from sklearn.linear_model import LinearRegression
 from summaries.scripts.infer import __main__, INFERENCE_CONFIGS, InferenceConfig
 from summaries.scripts.preprocess_coal import __main__ as __main__preprocess_coal
-from summaries.transformers import as_transformer, MinimumConditionalEntropyTransformer, Transformer
+from summaries.transformers import as_transformer, MinimumConditionalEntropyTransformer, \
+    NeuralTransformer, Transformer
+from torch import nn
 from typing import Any, Dict, Type
 from unittest import mock
 
@@ -70,12 +73,23 @@ def test_infer_coal(config: str, tmp_path: Path) -> None:
     output = tmp_path / "output.pkl"
     argv = [config, tmp_path / "simulated.pkl", tmp_path / "observed.pkl", output]
 
+    # Dump a simple transformer if required.
+    transformer_cls = INFERENCE_CONFIGS[config].transformer_cls
+    if transformer_cls == "pickled":
+        transformer = tmp_path / "transformer.pkl"
+        with transformer.open("wb") as fp:
+            pickle.dump({
+                "transformer": NeuralTransformer(nn.Linear(7, 2)),
+            }, fp)
+        argv.extend(["--transformer-kwargs", json.dumps({"transformer": str(transformer)})])
+
     def _run():
+        # We need to increase the fraction of samples to estimate the entropy in this test.
         with mock.patch.object(INFERENCE_CONFIGS[config], "frac", 0.1):
             __main__(map(str, argv))
 
-    # We need to increase the fraction of samples we're taking to estimate the entropy in this test.
-    if issubclass(INFERENCE_CONFIGS[config].transformer_cls, MinimumConditionalEntropyTransformer):
+    if isinstance(transformer_cls, Type) and \
+            issubclass(transformer_cls, MinimumConditionalEntropyTransformer):
         with mock.patch.object(INFERENCE_CONFIGS[config], "transformer_kwargs", {"frac": 0.1}):
             _run()
     else:

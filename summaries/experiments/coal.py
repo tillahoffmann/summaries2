@@ -27,15 +27,15 @@ class CoalPosteriorMeanTransformer(_CoalTransformer):
     """
     def __init__(self) -> None:
         super().__init__()
-        self.predictor = nn.Sequential(
+        self.transformer = nn.Sequential(
+            self.transformer,
             nn.LazyLinear(16),
             nn.Tanh(),
             nn.LazyLinear(2),
         )
 
     def forward(self, data: Tensor) -> Tensor:
-        transformed = self.transform(data)
-        return self.predictor(transformed)
+        return self.transformer(data)
 
 
 class CoalPosteriorMixtureDensityTransformer(_CoalTransformer):
@@ -55,7 +55,7 @@ class CoalPosteriorMixtureDensityTransformer(_CoalTransformer):
         })
 
     def forward(self, data: Tensor) -> Tensor:
-        transformed = self.transform(data)
+        transformed = self.transformer(data)
 
         logits: Tensor = self.mixture_parameters["logits"](transformed)
         mixture_dist = Categorical(logits=logits)
