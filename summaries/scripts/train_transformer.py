@@ -1,5 +1,4 @@
 from argparse import ArgumentParser
-from dataclasses import dataclass
 from datetime import datetime
 import itertools as it
 import numpy as np
@@ -9,11 +8,10 @@ from torch import as_tensor, get_default_dtype, nn, no_grad, Tensor
 from torch.optim import Adam
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import DataLoader, TensorDataset
-from typing import Any, Callable, Dict, List, Optional, Type
+from typing import Callable, List, Optional
 
 from ..experiments.coal import CoalPosteriorMixtureDensityTransformer, CoalPosteriorMeanTransformer
 from ..nn import NegLogProbLoss
-from ..transformers import NeuralTransformer
 from .base import resolve_path
 
 
@@ -25,24 +23,36 @@ class Args:
     output: Path
 
 
-@dataclass
 class TrainConfig:
-    loss: Callable[..., Tensor]
-    transformer_cls: Type[NeuralTransformer]
-    transformer_kwargs: Dict[str, Any] | None = None
-    max_epochs: int | None = None
+    def __init__(self, loss: Callable[..., Tensor], max_epochs: int | None = None) -> None:
+        self.loss = loss
+        self.max_epochs = max_epochs
+
+    def create_transformer(self):
+        raise NotImplementedError
 
 
-TRAIN_CONFIGS = {
-    "coal-neural_posterior_mean": TrainConfig(
-        nn.MSELoss(),
-        CoalPosteriorMeanTransformer,
-    ),
-    "coal-mixture_density_network": TrainConfig(
-        NegLogProbLoss(),
-        CoalPosteriorMixtureDensityTransformer,
-    )
-}
+class CoalescentPosteriorMeanConfig(TrainConfig):
+    def __init__(self) -> None:
+        super().__init__(nn.MSELoss())
+
+    def create_transformer(self):
+        return CoalPosteriorMeanTransformer()
+
+
+class CoalescentMixtureDensityConfig(TrainConfig):
+    def __init__(self) -> None:
+        super().__init__(NegLogProbLoss())
+
+    def create_transformer(self):
+        return CoalPosteriorMixtureDensityTransformer()
+
+
+TRAIN_CONFIGS = [
+    CoalescentMixtureDensityConfig(),
+    CoalescentPosteriorMeanConfig(),
+]
+TRAIN_CONFIGS = {config.__class__.__name__: config for config in TRAIN_CONFIGS}
 
 
 def _create_data_loader_from_pickle(path: Path, **kwargs) -> DataLoader:
@@ -75,8 +85,8 @@ def __main__(argv: Optional[List[str]] = None) -> None:
     train_loader = _create_data_loader_from_pickle(args.train, **data_loader_kwargs)
     validation_loader = _create_data_loader_from_pickle(args.validation, **data_loader_kwargs)
 
-    config = TRAIN_CONFIGS[args.config]
-    transformer = config.transformer_cls(**(config.transformer_kwargs or {})).to(args.device)
+    config: TrainConfig = TRAIN_CONFIGS[args.config]
+    transformer = config.create_transformer().to(args.device)
 
     # Run one pilot batch to initialize the lazy modules.
     data: Tensor

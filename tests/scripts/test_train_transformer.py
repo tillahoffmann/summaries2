@@ -8,7 +8,7 @@ from torch import as_tensor, nn, Tensor
 from unittest import mock
 
 
-@pytest.mark.parametrize("config", [x for x in TRAIN_CONFIGS if x.startswith("coal")])
+@pytest.mark.parametrize("config", [x for x in TRAIN_CONFIGS if x.startswith("Coalescent")])
 def test_train_transformer_coal(config: str, tmp_path: Path) -> None:
     # Split up the data to test and training sets.
     coaloracle = Path(__file__).parent.parent / "data/coaloracle_sample.csv"
@@ -26,7 +26,8 @@ def test_train_transformer_coal(config: str, tmp_path: Path) -> None:
     assert isinstance(result["transformer"], nn.Module)
 
 
-class _Dummy(nn.Module):
+# Outside the test function to support pickling in tests.
+class DummyModule(nn.Module):
     def __init__(self) -> None:
         super().__init__()
         self.theta = nn.Parameter(as_tensor(0.0))
@@ -46,12 +47,14 @@ def test_train_stopping(tmp_path: Path) -> None:
     output_path = tmp_path / "output.pkl"
     argv = ["test", data_path, data_path, output_path]
 
-    train_config = TrainConfig(
-        nn.MSELoss(),
-        _Dummy,
-    )
+    class DummyConfig(TrainConfig):
+        def __init__(self) -> None:
+            super().__init__(nn.MSELoss())
 
-    with mock.patch.dict(TRAIN_CONFIGS, test=train_config):
+        def create_transformer(self):
+            return DummyModule()
+
+    with mock.patch.dict(TRAIN_CONFIGS, test=DummyConfig()):
         __main__(map(str, argv))
 
     assert output_path.is_file()

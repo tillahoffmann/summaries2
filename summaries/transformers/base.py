@@ -1,28 +1,36 @@
 from __future__ import annotations
 import numpy as np
 from sklearn.base import BaseEstimator
-from sklearn.utils.validation import check_array
-from typing import Optional, Type, TypeVar
+from typing import Any, Optional
 
 
-T = TypeVar("T")
+class Transformer:
+    """
+    Type stub for sklearn transformers.
+    """
+    def fit(self, X: Any, y: Optional[Any] = None) -> Transformer:
+        ...  # pragma: no cover
+
+    def transform(self, X: Any) -> Any:
+        ...  # pragma: no cover
 
 
-def as_transformer(cls: Type[T], *, method: Optional[str] = None) -> Type[T]:
+class PredictorTransformer(BaseEstimator):
     """
     Use a predictor (https://scikit-learn.org/stable/glossary.html#term-predictor) as a trainable,
     supervised transformer.
     """
-    for candidate in ["predict", "predict_proba"]:
-        method = method or candidate
+    def __init__(self, predictor: Transformer, method: str | None = None) -> None:
+        self.predictor = predictor
+        self.method = method
 
-    class _Transformer(cls):
-        def transform(self, data: np.ndarray) -> np.ndarray:
-            transformed = getattr(self, method)(data)
-            return check_array(transformed)
+    def fit(self, data: np.ndarray, params: np.ndarray) -> PredictorTransformer:
+        self.predictor.fit(data, params)
+        return self
 
-    _Transformer.__name__ = f"Transformer{cls.__name__}"
-    return _Transformer
+    def transform(self, data: np.ndarray) -> np.ndarray:
+        method = self.method or "predict"
+        return getattr(self.predictor, method)(data)
 
 
 class _DataDependentTransformerMixin(BaseEstimator):
