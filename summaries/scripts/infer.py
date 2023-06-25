@@ -30,21 +30,26 @@ class InferenceConfig:
     """
     Configuration for reproducible inference.
     """
-    transformer_cls: Type[Transformer]
     frac: float
+    transformer_cls: Type[Transformer]
     transformer_kwargs: Optional[Dict[str, Any]] = None
     preprocessor_cls: Optional[Type[Transformer]] = None
 
 
+COAL_FRAC = 0.01
 INFERENCE_CONFIGS = {
-    "coal-linear_posterior_mean": InferenceConfig(0.01, as_transformer(LinearRegression)),
-    "coal-nonlinear_posterior_mean": InferenceConfig(0.01, as_transformer(MLPRegressor)),
-    "coal-minimum_conditional_entropy": InferenceConfig(0.01, MinimumConditionalEntropyTransformer),
+    "coal-linear_posterior_mean": InferenceConfig(COAL_FRAC, as_transformer(LinearRegression)),
+    "coal-nonlinear_posterior_mean": InferenceConfig(COAL_FRAC, as_transformer(MLPRegressor)),
+    "coal-minimum_conditional_entropy": InferenceConfig(
+        COAL_FRAC,
+        MinimumConditionalEntropyTransformer,
+        {"frac": COAL_FRAC},
+    ),
 }
 
 
 def _build_pipeline(config: InferenceConfig, **transformer_kwargs: Any) -> Pipeline:
-    transformer = config.transformer_cls(**config.transformer_kwargs, **transformer_kwargs)
+    transformer = config.transformer_cls(**(config.transformer_kwargs or {}), **transformer_kwargs)
     return Pipeline([
         ("transform", transformer),
         ("standardize", StandardScaler()),
@@ -86,12 +91,12 @@ def __main__(argv: Optional[List[str]] = None) -> None:
         samples = []
         for observed_data in observed["data"]:
             pipeline = _build_pipeline(config, observed_data=observed_data,
-                                       **args.transformer_kwargs)
+                                       **(args.transformer_kwargs or {}))
             pipeline.fit(simulated["data"], simulated["params"])
             samples.append(pipeline.predict([observed_data])[0])
         samples = np.asarray(samples)
     else:
-        pipeline = _build_pipeline(config, **args.transformer_kwargs)
+        pipeline = _build_pipeline(config, **(args.transformer_kwargs or {}))
         pipeline.fit(simulated["data"], simulated["params"])
         samples = pipeline.predict(observed["data"])
 
