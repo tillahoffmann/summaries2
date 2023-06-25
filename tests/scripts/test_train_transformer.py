@@ -17,7 +17,7 @@ def test_train_transformer_coal(config: str, tmp_path: Path) -> None:
     output = tmp_path / "output.pkl"
     argv = [config, tmp_path / "train.pkl", tmp_path / "validation.pkl", output]
 
-    with mock.patch.object(TRAIN_CONFIGS[config], "max_epochs", 2):
+    with mock.patch.object(TRAIN_CONFIGS[config], "MAX_EPOCHS", 2):
         __main__(map(str, argv))
 
     with output.open("rb") as fp:
@@ -48,13 +48,12 @@ def test_train_stopping(tmp_path: Path) -> None:
     argv = ["test", data_path, data_path, output_path]
 
     class DummyConfig(TrainConfig):
-        def __init__(self) -> None:
-            super().__init__(nn.MSELoss())
+        LOSS = nn.MSELoss()
 
         def create_transformer(self):
             return DummyModule()
 
-    with mock.patch.dict(TRAIN_CONFIGS, test=DummyConfig()):
+    with mock.patch.dict(TRAIN_CONFIGS, test=DummyConfig):
         __main__(map(str, argv))
 
     assert output_path.is_file()

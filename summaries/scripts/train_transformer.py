@@ -24,35 +24,39 @@ class Args:
 
 
 class TrainConfig:
-    def __init__(self, loss: Callable[..., Tensor], max_epochs: int | None = None) -> None:
-        self.loss = loss
-        self.max_epochs = max_epochs
+    """
+    Base class for training configurations.
+    """
+    LOSS: Callable[..., Tensor] | None = None
+    MAX_EPOCHS: int | None = None
+
+    def __init__(self, args: Args) -> None:
+        self.args = args
+        assert self.LOSS is not None
 
     def create_transformer(self):
         raise NotImplementedError
 
 
 class CoalescentPosteriorMeanConfig(TrainConfig):
-    def __init__(self) -> None:
-        super().__init__(nn.MSELoss())
+    LOSS = nn.MSELoss()
 
     def create_transformer(self):
         return CoalPosteriorMeanTransformer()
 
 
 class CoalescentMixtureDensityConfig(TrainConfig):
-    def __init__(self) -> None:
-        super().__init__(NegLogProbLoss())
+    LOSS = NegLogProbLoss()
 
     def create_transformer(self):
         return CoalPosteriorMixtureDensityTransformer()
 
 
 TRAIN_CONFIGS = [
-    CoalescentMixtureDensityConfig(),
-    CoalescentPosteriorMeanConfig(),
+    CoalescentMixtureDensityConfig,
+    CoalescentPosteriorMeanConfig,
 ]
-TRAIN_CONFIGS = {config.__class__.__name__: config for config in TRAIN_CONFIGS}
+TRAIN_CONFIGS = {config.__name__: config for config in TRAIN_CONFIGS}
 
 
 def _create_data_loader_from_pickle(path: Path, **kwargs) -> DataLoader:
@@ -85,7 +89,7 @@ def __main__(argv: Optional[List[str]] = None) -> None:
     train_loader = _create_data_loader_from_pickle(args.train, **data_loader_kwargs)
     validation_loader = _create_data_loader_from_pickle(args.validation, **data_loader_kwargs)
 
-    config: TrainConfig = TRAIN_CONFIGS[args.config]
+    config: TrainConfig = TRAIN_CONFIGS[args.config](args)
     transformer = config.create_transformer().to(args.device)
 
     # Run one pilot batch to initialize the lazy modules.
@@ -110,7 +114,7 @@ def __main__(argv: Optional[List[str]] = None) -> None:
         for data, params in train_loader:
             optim.zero_grad()
             output = transformer(data)
-            loss_value = config.loss(output, params)
+            loss_value = config.LOSS(output, params)
             loss_value.backward()
             optim.step()
             sizes.append(data.shape[0])
@@ -124,7 +128,7 @@ def __main__(argv: Optional[List[str]] = None) -> None:
         with no_grad():
             for data, params in validation_loader:
                 output = transformer(data)
-                loss_value = config.loss(output, params)
+                loss_value = config.LOSS(output, params)
                 sizes.append(data.shape[0])
                 loss_values.append(loss_value)
 
@@ -132,7 +136,7 @@ def __main__(argv: Optional[List[str]] = None) -> None:
         scheduler.step(validation_loss)
 
         # Break if we've reached the maximum number of epochs.
-        if config.max_epochs and epoch == config.max_epochs:
+        if config.MAX_EPOCHS and epoch == config.MAX_EPOCHS:
             break
 
         # Determine whether to stop training based on validation loss.
