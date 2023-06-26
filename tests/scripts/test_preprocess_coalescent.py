@@ -1,6 +1,6 @@
 from pathlib import Path
 import pickle
-from summaries.scripts.preprocess_coal import __main__
+from summaries.scripts.preprocess_coalescent import __main__
 
 
 def test_preprocess_coal(tmp_path: Path) -> None:

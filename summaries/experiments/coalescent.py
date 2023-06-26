@@ -5,7 +5,7 @@ from torch.distributions import AffineTransform, Beta, Categorical, Independent,
 from ..transformers import NeuralTransformer
 
 
-class _CoalTransformer(NeuralTransformer):
+class _CoalescentTransformer(NeuralTransformer):
     """
     Learnable transformer for the coalescent problem without the "head" of the network.
     """
@@ -21,7 +21,7 @@ class _CoalTransformer(NeuralTransformer):
         super().__init__(transformer)
 
 
-class CoalPosteriorMeanTransformer(_CoalTransformer):
+class CoalescentPosteriorMeanTransformer(_CoalescentTransformer):
     """
     Learnable transformer with posterior mean predictive "head".
     """
@@ -38,7 +38,7 @@ class CoalPosteriorMeanTransformer(_CoalTransformer):
         return self.transformer(data)
 
 
-class CoalPosteriorMixtureDensityTransformer(_CoalTransformer):
+class CoalescentPosteriorMixtureDensityTransformer(_CoalescentTransformer):
     """
     Learnable transformer with conditional posterior density estimation "head" based on mixture
     density networks.

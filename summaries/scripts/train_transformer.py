@@ -1,5 +1,4 @@
 from argparse import ArgumentParser
-from dataclasses import dataclass
 from datetime import datetime
 import itertools as it
 import numpy as np
@@ -9,11 +8,11 @@ from torch import as_tensor, get_default_dtype, nn, no_grad, Tensor
 from torch.optim import Adam
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import DataLoader, TensorDataset
-from typing import Any, Callable, Dict, List, Optional, Type
+from typing import Callable, List, Optional
 
-from ..experiments.coal import CoalPosteriorMixtureDensityTransformer, CoalPosteriorMeanTransformer
+from ..experiments.coalescent import CoalescentPosteriorMixtureDensityTransformer, \
+    CoalescentPosteriorMeanTransformer
 from ..nn import NegLogProbLoss
-from ..transformers import NeuralTransformer
 from .base import resolve_path
 
 
@@ -25,24 +24,40 @@ class Args:
     output: Path
 
 
-@dataclass
 class TrainConfig:
-    loss: Callable[..., Tensor]
-    transformer_cls: Type[NeuralTransformer]
-    transformer_kwargs: Dict[str, Any] | None = None
-    max_epochs: int | None = None
+    """
+    Base class for training configurations.
+    """
+    LOSS: Callable[..., Tensor] | None = None
+    MAX_EPOCHS: int | None = None
+
+    def __init__(self, args: Args) -> None:
+        self.args = args
+        assert self.LOSS is not None
+
+    def create_transformer(self):
+        raise NotImplementedError
 
 
-TRAIN_CONFIGS = {
-    "coal-neural_posterior_mean": TrainConfig(
-        nn.MSELoss(),
-        CoalPosteriorMeanTransformer,
-    ),
-    "coal-mixture_density_network": TrainConfig(
-        NegLogProbLoss(),
-        CoalPosteriorMixtureDensityTransformer,
-    )
-}
+class CoalescentPosteriorMeanConfig(TrainConfig):
+    LOSS = nn.MSELoss()
+
+    def create_transformer(self):
+        return CoalescentPosteriorMeanTransformer()
+
+
+class CoalescentMixtureDensityConfig(TrainConfig):
+    LOSS = NegLogProbLoss()
+
+    def create_transformer(self):
+        return CoalescentPosteriorMixtureDensityTransformer()
+
+
+TRAIN_CONFIGS = [
+    CoalescentMixtureDensityConfig,
+    CoalescentPosteriorMeanConfig,
+]
+TRAIN_CONFIGS = {config.__name__: config for config in TRAIN_CONFIGS}
 
 
 def _create_data_loader_from_pickle(path: Path, **kwargs) -> DataLoader:
@@ -75,8 +90,8 @@ def __main__(argv: Optional[List[str]] = None) -> None:
     train_loader = _create_data_loader_from_pickle(args.train, **data_loader_kwargs)
     validation_loader = _create_data_loader_from_pickle(args.validation, **data_loader_kwargs)
 
-    config = TRAIN_CONFIGS[args.config]
-    transformer = config.transformer_cls(**(config.transformer_kwargs or {})).to(args.device)
+    config: TrainConfig = TRAIN_CONFIGS[args.config](args)
+    transformer = config.create_transformer().to(args.device)
 
     # Run one pilot batch to initialize the lazy modules.
     data: Tensor
@@ -100,7 +115,7 @@ def __main__(argv: Optional[List[str]] = None) -> None:
         for data, params in train_loader:
             optim.zero_grad()
             output = transformer(data)
-            loss_value = config.loss(output, params)
+            loss_value = config.LOSS(output, params)
             loss_value.backward()
             optim.step()
             sizes.append(data.shape[0])
@@ -114,7 +129,7 @@ def __main__(argv: Optional[List[str]] = None) -> None:
         with no_grad():
             for data, params in validation_loader:
                 output = transformer(data)
-                loss_value = config.loss(output, params)
+                loss_value = config.LOSS(output, params)
                 sizes.append(data.shape[0])
                 loss_values.append(loss_value)
 
@@ -122,7 +137,7 @@ def __main__(argv: Optional[List[str]] = None) -> None:
         scheduler.step(validation_loss)
 
         # Break if we've reached the maximum number of epochs.
-        if config.max_epochs and epoch == config.max_epochs:
+        if config.MAX_EPOCHS and epoch == config.MAX_EPOCHS:
             break
 
         # Determine whether to stop training based on validation loss.

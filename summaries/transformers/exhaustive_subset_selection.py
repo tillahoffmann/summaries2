@@ -59,13 +59,18 @@ class MinimumConditionalEntropyTransformer(_DataDependentTransformerMixin,
     Args:
         observed_data: Vector of raw data or summaries.
         frac: Passed to the interneal nearest neighbor sampler for estimating the entropy.
+        thin: Use only every `thin` samples to draw posterior samples for estimating the entropy.
     """
-    def __init__(self, observed_data: np.ndarray, frac: float) -> None:
+    def __init__(self, observed_data: np.ndarray, frac: float, thin: int = 1) -> None:
         super().__init__(observed_data)
         self.frac = frac
+        self.thin = thin
 
     def _evaluate_mask(self, data, params: np.ndarray, mask: np.ndarray) -> float:
-        sampler = NearestNeighborAlgorithm(self.frac).fit(data[:, mask], params)
+        # Building the tree is relatively expensive compared with querying because we only query
+        # once. The keyword arguments try to reduce the tree build time.
+        sampler = NearestNeighborAlgorithm(self.frac, balanced_tree=False, compact_nodes=False)
+        sampler.fit(data[::self.thin, mask], params[::self.thin])
         # Add a batch dimension to the observed data, draw samples, and remove the batch dimension.
         samples, = sampler.predict([self.observed_data[mask]])
         return estimate_entropy(samples)

@@ -2,24 +2,25 @@ import numpy as np
 import pytest
 from sklearn.exceptions import NotFittedError
 from sklearn.linear_model import LinearRegression
-from summaries.transformers import as_transformer, MinimumConditionalEntropyTransformer, \
-    NeuralTransformer
-from summaries.transformers.base import _DataDependentTransformerMixin
+from summaries.transformers import MinimumConditionalEntropyTransformer, NeuralTransformer, \
+    PredictorTransformer
+from summaries.transformers.base import _DataDependentTransformerMixin, Transformer
 from torch.nn import Identity
 from typing import Dict, Type
 
 
 @pytest.mark.parametrize("transformer_cls, kwargs", [
-    (as_transformer(LinearRegression), {"fit_intercept": False}),
+    (lambda: PredictorTransformer(LinearRegression(fit_intercept=False)), {}),
     (MinimumConditionalEntropyTransformer, {"frac": 0.01}),
     (NeuralTransformer, {"transformer": Identity()}),
 ])
-def test_transformer(transformer_cls: Type, kwargs: Dict, simulated_data: np.ndarray,
+def test_transformer(transformer_cls: Type[Transformer], kwargs: Dict, simulated_data: np.ndarray,
                      simulated_params: np.ndarray, observed_data: np.ndarray) -> None:
 
     # Create the transformer and verify it does not transform without fitting (except pretrained
     # neural transformers).
-    if issubclass(transformer_cls, _DataDependentTransformerMixin):
+    if isinstance(transformer_cls, Type) \
+            and issubclass(transformer_cls, _DataDependentTransformerMixin):
         kwargs["observed_data"] = observed_data[0]
     transformer = transformer_cls(**kwargs)
 

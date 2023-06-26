@@ -16,3 +16,12 @@ def test_posterior_mean_correlation(simulated_data: np.ndarray, simulated_params
 def test_nearest_neighbor_not_fitted() -> None:
     with pytest.raises(NotFittedError):
         NearestNeighborAlgorithm(0.01).predict(None)
+
+
+@pytest.mark.parametrize("n_samples", [1, 2])
+@pytest.mark.parametrize("batch_size", [1, 7])
+def test_nearest_neighbor_single_sample(n_samples: int, batch_size: int) -> None:
+    sampler = NearestNeighborAlgorithm(n_samples / 100)
+    sampler.fit(np.random.normal(0, 1, (100, 3)), np.random.normal(0, 1, (100, 2)))
+    samples = sampler.predict(np.random.normal(0, 1, (batch_size, 3)))
+    assert samples.shape == (batch_size, n_samples, 2)
