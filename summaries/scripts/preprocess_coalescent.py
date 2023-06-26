@@ -1,5 +1,4 @@
 from argparse import ArgumentParser
-import numpy as np
 import pandas as pd
 from pathlib import Path
 import pickle
@@ -20,8 +19,8 @@ class Args:
 
 
 def __main__(argv: Optional[List[str]] = None) -> None:
-    parser = ArgumentParser("preprocess_coal")
-    parser.add_argument("--seed", help="random number generator seed", type=np.random.seed)
+    parser = ArgumentParser("preprocess_coalescent")
+    parser.add_argument("--seed", help="random number generator seed", type=int)
     parser.add_argument("coaloracle", help="path to file containing coalescent samples")
     parser.add_argument("output", help="output directory path", type=resolve_path)
     parser.add_argument("splits", help="path to dataset splits and sizes as `[path]:[size]`",
@@ -29,7 +28,7 @@ def __main__(argv: Optional[List[str]] = None) -> None:
     args: Args = parser.parse_args(argv)
 
     # Load the data and shuffle it; verify that the first two columns are parameters.
-    data = pd.read_csv(args.coaloracle).sample(frac=1, replace=False)
+    data = pd.read_csv(args.coaloracle).sample(frac=1, random_state=args.seed, replace=False)
     columns = list(data.columns)
     assert columns[:2] == ["theta", "rho"]
 

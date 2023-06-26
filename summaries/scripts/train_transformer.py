@@ -10,7 +10,8 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import DataLoader, TensorDataset
 from typing import Callable, List, Optional
 
-from ..experiments.coal import CoalPosteriorMixtureDensityTransformer, CoalPosteriorMeanTransformer
+from ..experiments.coalescent import CoalescentPosteriorMixtureDensityTransformer, \
+    CoalescentPosteriorMeanTransformer
 from ..nn import NegLogProbLoss
 from .base import resolve_path
 
@@ -42,14 +43,14 @@ class CoalescentPosteriorMeanConfig(TrainConfig):
     LOSS = nn.MSELoss()
 
     def create_transformer(self):
-        return CoalPosteriorMeanTransformer()
+        return CoalescentPosteriorMeanTransformer()
 
 
 class CoalescentMixtureDensityConfig(TrainConfig):
     LOSS = NegLogProbLoss()
 
     def create_transformer(self):
-        return CoalPosteriorMixtureDensityTransformer()
+        return CoalescentPosteriorMixtureDensityTransformer()
 
 
 TRAIN_CONFIGS = [

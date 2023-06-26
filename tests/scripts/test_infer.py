@@ -6,7 +6,7 @@ import pickle
 import pytest
 from sklearn.linear_model import LinearRegression
 from summaries.scripts.infer import __main__, INFERENCE_CONFIGS, InferenceConfig
-from summaries.scripts.preprocess_coal import __main__ as __main__preprocess_coal
+from summaries.scripts.preprocess_coalescent import __main__ as __main__preprocess_coalescent
 from summaries.transformers import MinimumConditionalEntropyTransformer, NeuralTransformer, \
     PredictorTransformer, Transformer
 from torch import nn
@@ -71,18 +71,18 @@ def test_infer(simulated_data: np.ndarray, simulated_params: np.ndarray, observe
     assert result["samples"].shape == (7, 1000, simulated_params.shape[-1])
 
 
-@pytest.mark.parametrize("config_name", [x for x in INFERENCE_CONFIGS if x.startswith("Coal")])
-def test_coal_infer(config_name: str, tmp_path: Path) -> None:
+@pytest.mark.parametrize("config", [x for x in INFERENCE_CONFIGS if x.startswith("Coalescent")])
+def test_coalescent_infer(config: str, tmp_path: Path) -> None:
     # Split up the data to test and training sets.
     coaloracle = Path(__file__).parent.parent / "data/coaloracle_sample.csv"
-    __main__preprocess_coal(map(str, [coaloracle, tmp_path, "simulated:98", "observed:2"]))
+    __main__preprocess_coalescent(map(str, [coaloracle, tmp_path, "simulated:98", "observed:2"]))
 
     # Prepare the arguments.
     output = tmp_path / "output.pkl"
-    argv = [config_name, tmp_path / "simulated.pkl", tmp_path / "observed.pkl", output]
+    argv = [config, tmp_path / "simulated.pkl", tmp_path / "observed.pkl", output]
 
     # Dump a simple transformer if required.
-    if config_name == "CoalescentNeuralConfig":
+    if config == "CoalescentNeuralConfig":
         transformer = tmp_path / "transformer.pkl"
         with transformer.open("wb") as fp:
             pickle.dump({
@@ -90,11 +90,8 @@ def test_coal_infer(config_name: str, tmp_path: Path) -> None:
             }, fp)
         argv.extend(["--transformer-kwargs", json.dumps({"transformer": str(transformer)})])
 
-    # We only create a config here to
-    config = INFERENCE_CONFIGS[config_name]
-
     # We need to increase the fraction of samples to estimate the entropy in this test.
-    with mock.patch.object(config, "FRAC", 0.1):
+    with mock.patch.object(INFERENCE_CONFIGS[config], "FRAC", 0.1):
         __main__(map(str, argv))
 
     with output.open("rb") as fp:

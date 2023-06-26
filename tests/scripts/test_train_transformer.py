@@ -2,17 +2,17 @@ import numpy as np
 from pathlib import Path
 import pickle
 import pytest
-from summaries.scripts.preprocess_coal import __main__ as __main__preprocess_coal
+from summaries.scripts.preprocess_coalescent import __main__ as __main__preprocess_coalescent
 from summaries.scripts.train_transformer import __main__, TrainConfig, TRAIN_CONFIGS
 from torch import as_tensor, nn, Tensor
 from unittest import mock
 
 
 @pytest.mark.parametrize("config", [x for x in TRAIN_CONFIGS if x.startswith("Coalescent")])
-def test_train_transformer_coal(config: str, tmp_path: Path) -> None:
+def test_train_transformer_coalescent(config: str, tmp_path: Path) -> None:
     # Split up the data to test and training sets.
     coaloracle = Path(__file__).parent.parent / "data/coaloracle_sample.csv"
-    __main__preprocess_coal(map(str, [coaloracle, tmp_path, "train:98", "validation:2"]))
+    __main__preprocess_coalescent(map(str, [coaloracle, tmp_path, "train:98", "validation:2"]))
 
     output = tmp_path / "output.pkl"
     argv = [config, tmp_path / "train.pkl", tmp_path / "validation.pkl", output]
