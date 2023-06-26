@@ -8,7 +8,7 @@ from torch import as_tensor, get_default_dtype, nn, no_grad, Tensor
 from torch.optim import Adam
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import DataLoader, TensorDataset
-from typing import Callable, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 from ..experiments.coalescent import CoalescentPosteriorMixtureDensityTransformer, \
     CoalescentPosteriorMeanTransformer
@@ -30,6 +30,7 @@ class TrainConfig:
     """
     LOSS: Callable[..., Tensor] | None = None
     MAX_EPOCHS: int | None = None
+    DATA_LOADER_KWARGS: Dict[str, Any] = {}
 
     def __init__(self, args: Args) -> None:
         self.args = args
@@ -38,15 +39,32 @@ class TrainConfig:
     def create_transformer(self):
         raise NotImplementedError
 
+    def create_data_loader(self, path: Path, **kwargs: Any) -> DataLoader:
+        with path.open("rb") as fp:
+            result = pickle.load(fp)
+        dtype = kwargs.pop("dtype", get_default_dtype())
+        device = kwargs.pop("device", None)
+        data = as_tensor(result["data"], dtype=dtype, device=device)
+        params = as_tensor(result["params"], dtype=dtype, device=device)
+        dataset = TensorDataset(data, params)
+        return DataLoader(dataset, **kwargs)
 
-class CoalescentPosteriorMeanConfig(TrainConfig):
+
+class CoalescentTrainConfig(TrainConfig):
+    DATA_LOADER_KWARGS = {
+        "batch_size": 256,
+        "shuffle": True,
+    }
+
+
+class CoalescentPosteriorMeanConfig(CoalescentTrainConfig):
     LOSS = nn.MSELoss()
 
     def create_transformer(self):
         return CoalescentPosteriorMeanTransformer()
 
 
-class CoalescentMixtureDensityConfig(TrainConfig):
+class CoalescentMixtureDensityConfig(CoalescentTrainConfig):
     LOSS = NegLogProbLoss()
 
     def create_transformer(self):
@@ -60,17 +78,6 @@ TRAIN_CONFIGS = [
 TRAIN_CONFIGS = {config.__name__: config for config in TRAIN_CONFIGS}
 
 
-def _create_data_loader_from_pickle(path: Path, **kwargs) -> DataLoader:
-    with path.open("rb") as fp:
-        result = pickle.load(fp)
-    dtype = kwargs.pop("dtype", get_default_dtype())
-    device = kwargs.pop("device", None)
-    data = as_tensor(result["data"], dtype=dtype, device=device)
-    params = as_tensor(result["params"], dtype=dtype, device=device)
-    dataset = TensorDataset(data, params)
-    return DataLoader(dataset, **kwargs)
-
-
 def __main__(argv: Optional[List[str]] = None) -> None:
     start = datetime.now()
     parser = ArgumentParser("train_transformer")
@@ -81,19 +88,14 @@ def __main__(argv: Optional[List[str]] = None) -> None:
     parser.add_argument("output", type=resolve_path, help="path to output file")
     args: Args = parser.parse_args(argv)
 
-    # Load the data into tensor datasets.
-    data_loader_kwargs = {
-        "batch_size": 256,
-        "shuffle": True,
-        "device": args.device,
-    }
-    train_loader = _create_data_loader_from_pickle(args.train, **data_loader_kwargs)
-    validation_loader = _create_data_loader_from_pickle(args.validation, **data_loader_kwargs)
-
     config: TrainConfig = TRAIN_CONFIGS[args.config](args)
-    transformer = config.create_transformer().to(args.device)
+
+    # Load the data into tensor datasets.
+    train_loader = config.create_data_loader(args.train, device=args.device)
+    validation_loader = config.create_data_loader(args.validation, device=args.device)
 
     # Run one pilot batch to initialize the lazy modules.
+    transformer = config.create_transformer().to(args.device)
     data: Tensor
     for data, _ in train_loader:
         transformer(data)
