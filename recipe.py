@@ -12,7 +12,7 @@ create_task("requirements", action="pip-compile -v", targets=["requirements.txt"
 create_task("tests", action="pytest -v --cov=summaries --cov-report=html --cov-fail-under=100")
 
 
-COALESCENT_ROOT = root = Path("workspace/coalescent")
+COALESCENT_ROOT = Path("workspace/coalescent")
 
 
 def prepare_coalescent_data() -> Dict[str, Path]:
