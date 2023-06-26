@@ -8,6 +8,7 @@ from sklearn.linear_model import LinearRegression
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from torch import no_grad
+from tqdm import tqdm
 from typing import Any, Dict, List, Optional
 
 from ..algorithm import NearestNeighborAlgorithm
@@ -111,7 +112,7 @@ def __main__(argv: Optional[List[str]] = None) -> None:
     # process them as a batch otherwise.
     if config.IS_DATA_DEPENDENT:
         samples = []
-        for observed_data in observed["data"]:
+        for observed_data in tqdm(observed["data"]):
             pipeline = _build_pipeline(config, observed_data)
             pipeline.fit(simulated["data"], simulated["params"])
             samples.append(pipeline.predict([observed_data])[0])
