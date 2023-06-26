@@ -9,7 +9,7 @@ def sample_params(n: int, p: int) -> np.ndarray:
 def sample_data(params: np.ndarray) -> np.ndarray:
     n = params.shape[0]
     x = params + np.random.normal(0, .1, (n, 2))
-    return np.hstack([x, np.random.normal(0, 1, (n, 1))])
+    return np.hstack([x, np.random.normal(0, 10, (n, 1))])
 
 
 @pytest.fixture(params=[1, 2])
