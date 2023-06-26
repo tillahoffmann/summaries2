@@ -1,9 +1,9 @@
 import networkx as nx
 import numpy as np
-from typing import Tuple
+from typing import Any, Tuple
 
 
-def simulate_graph(n_nodes: int, gamma: int | None = None, seed: int | None = None) \
+def simulate_graph(n_nodes: int, gamma: int | None = None, seed: Any | None = None) \
         -> Tuple[nx.DiGraph, float]:
     """
     Simulate a preferential attachment graph with power attachment kernel.

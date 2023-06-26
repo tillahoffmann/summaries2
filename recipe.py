@@ -12,7 +12,9 @@ create_task("requirements", action="pip-compile -v", targets=["requirements.txt"
 create_task("tests", action="pytest -v --cov=summaries --cov-report=html --cov-fail-under=100")
 
 
-COALESCENT_ROOT = Path("workspace/coalescent")
+ROOT = Path("workspace")
+COALESCENT_ROOT = ROOT / "coalescent"
+GRAPH_ROOT = ROOT / "graph"
 
 
 def prepare_coalescent_data() -> Dict[str, Path]:
@@ -81,7 +83,7 @@ def infer_coalescent_posterior(splits: Dict[str, Path], config: str,
     return posterior_target
 
 
-def create_coalescent_tasks() -> None:
+def create_coalescent_tasks() -> Dict[str, Path]:
     splits = prepare_coalescent_data()
 
     transformers = train_coalescent_transformers(splits)
@@ -96,4 +98,20 @@ def create_coalescent_tasks() -> None:
     return sample_targets
 
 
+def simulate_graph_data() -> Dict[str, Path]:
+    data_root = GRAPH_ROOT / "data"
+
+    splits = {"train": (100_000, 0), "validation": (1_000, 1), "test": (1_000, 2)}
+    for split, (n_samples, seed) in splits.items():
+        target = data_root / f"{split}.pkl"
+        action = ["python", "-m", "summaries.scripts.simulate_data", f"--n-samples={n_samples}",
+                  f"--seed={seed}", "GraphSimulationConfig", target]
+        create_task(f"graph:data:{split}", targets=[target], action=action)
+
+
+def create_graph_tasks() -> None:
+    simulate_graph_data()
+
+
 create_coalescent_tasks()
+create_graph_tasks()
