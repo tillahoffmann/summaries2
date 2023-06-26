@@ -57,5 +57,7 @@ class NearestNeighborAlgorithm(BaseEstimator):
         data = check_array(data)
         n_samples = int(self.frac * self.tree_.n)
         _, idx = self.tree_.query(data, k=n_samples, p=self.minkowski_norm, **kwargs)
+        # Explicitly reshape because `query` drops on dimension if the number of samples is one.
+        idx = idx.reshape((*data.shape[:-1], n_samples))
 
         return self.params_[idx]
