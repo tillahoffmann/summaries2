@@ -2,15 +2,15 @@ import numpy as np
 import pytest
 from sklearn.exceptions import NotFittedError
 from sklearn.linear_model import LinearRegression
-from summaries.transformers import MinimumConditionalEntropyTransformer, NeuralTransformer, \
-    PredictorTransformer
+from summaries.transformers import as_transformer, MinimumConditionalEntropyTransformer, \
+    NeuralTransformer
 from summaries.transformers.base import _DataDependentTransformerMixin, Transformer
 from torch.nn import Identity
 from typing import Dict, Type
 
 
 @pytest.mark.parametrize("transformer_cls, kwargs", [
-    (lambda: PredictorTransformer(LinearRegression(fit_intercept=False)), {}),
+    (as_transformer(LinearRegression), {"fit_intercept": False}),
     (MinimumConditionalEntropyTransformer, {"frac": 0.01}),
     (NeuralTransformer, {"transformer": Identity()}),
 ])

@@ -12,7 +12,7 @@ from tqdm import tqdm
 from typing import Any, Dict, List, Optional
 
 from ..algorithm import NearestNeighborAlgorithm
-from ..transformers import MinimumConditionalEntropyTransformer, PredictorTransformer, Transformer
+from ..transformers import as_transformer, MinimumConditionalEntropyTransformer, Transformer
 from .base import resolve_path
 
 
@@ -55,7 +55,7 @@ class CoalescentMinimumConditionalEntropyConfig(CoalescentConfig):
 
 class CoalescentLinearPosteriorMeanConfig(CoalescentConfig):
     def create_transformer(self, observed_data: Any | None = None) -> Transformer:
-        return PredictorTransformer(LinearRegression())
+        return as_transformer(LinearRegression)()
 
 
 class CoalescentNeuralConfig(CoalescentConfig):

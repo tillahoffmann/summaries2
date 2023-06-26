@@ -1,7 +1,8 @@
 from __future__ import annotations
+from functools import partial
 import numpy as np
 from sklearn.base import BaseEstimator
-from typing import Any, Optional
+from typing import Any, Optional, Type, TypeVar
 
 
 class Transformer:
@@ -15,21 +16,43 @@ class Transformer:
         ...  # pragma: no cover
 
 
-class PredictorTransformer(BaseEstimator):
+T = TypeVar("T")
+
+
+def as_transformer(cls: T, *, _method: str | None = None) -> T:
+    """
+    Use a predictor (https://scikit-learn.org/stable/glossary.html#term-predictor) as a trainable,
+    supervised transformer.
+
+    Args:
+        cls: Type of the predictor.
+        _method: Predictor method to use for transforming data (determined automatically by
+            default).
+
+    Returns:
+        Predictor type whose prediction method acts as a transformer.
+    """
+    return partial(_PredictorTransformer, cls, _method=_method)
+
+
+class _PredictorTransformer(BaseEstimator):
     """
     Use a predictor (https://scikit-learn.org/stable/glossary.html#term-predictor) as a trainable,
     supervised transformer.
     """
-    def __init__(self, predictor: Transformer, method: str | None = None) -> None:
-        self.predictor = predictor
-        self.method = method
+    def __init__(self, cls: Type[BaseEstimator], *, _method: str | None = None, **kwargs: Any) \
+            -> None:
+        self.cls = cls
+        self.kwargs = kwargs
+        self.predictor = self.cls(**self.kwargs)
+        self._method = _method
 
-    def fit(self, data: np.ndarray, params: np.ndarray) -> PredictorTransformer:
+    def fit(self, data: np.ndarray, params: np.ndarray) -> _PredictorTransformer:
         self.predictor.fit(data, params)
         return self
 
     def transform(self, data: np.ndarray) -> np.ndarray:
-        method = self.method or "predict"
+        method = self._method or "predict"
         return getattr(self.predictor, method)(data)
 
 

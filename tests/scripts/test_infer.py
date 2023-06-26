@@ -7,8 +7,8 @@ import pytest
 from sklearn.linear_model import LinearRegression
 from summaries.scripts.infer import __main__, INFERENCE_CONFIGS, InferenceConfig
 from summaries.scripts.preprocess_coalescent import __main__ as __main__preprocess_coalescent
-from summaries.transformers import MinimumConditionalEntropyTransformer, NeuralTransformer, \
-    PredictorTransformer, Transformer
+from summaries.transformers import as_transformer, MinimumConditionalEntropyTransformer, \
+    NeuralTransformer, Transformer
 from torch import nn
 from typing import Any, Type
 from unittest import mock
@@ -32,7 +32,7 @@ class DummyConfig(InferenceConfig):
 
 class DummyPredictorConfig(DummyConfig):
     def create_transformer(self, observed_data: Any | None = None) -> Transformer:
-        return PredictorTransformer(LinearRegression())
+        return as_transformer(LinearRegression)()
 
 
 class DummyMinimumConditionalEntropyConfig(DummyConfig):
