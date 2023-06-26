@@ -1,0 +1,29 @@
+import numpy as np
+import pytest
+from scipy import stats
+from sklearn.base import BaseEstimator
+from sklearn.linear_model import LinearRegression
+from sklearn.neural_network import MLPRegressor
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+from summaries.algorithm import NearestNeighborAlgorithm
+from summaries.transformers import as_transformer
+from typing import Type
+
+
+@pytest.mark.parametrize("predictor_cls", [LinearRegression, MLPRegressor])
+def test_pipeline_posterior_mean_correlation(
+        simulated_data: np.ndarray, simulated_params: np.ndarray, observed_data: np.ndarray,
+        latent_params: np.ndarray, predictor_cls: Type[BaseEstimator],
+        ) -> None:
+    pipeline = Pipeline([
+        ("standardize_data", StandardScaler()),
+        ("learn_posterior_mean", as_transformer(predictor_cls)()),
+        ("standardize_summaries", StandardScaler()),
+        ("sample_posterior", NearestNeighborAlgorithm(frac=0.01)),
+    ])
+    pipeline.fit(simulated_data, simulated_params)
+    posterior_mean = pipeline.predict(observed_data).mean(axis=1)
+
+    pearsonr = stats.pearsonr(posterior_mean.ravel(), latent_params.ravel())
+    assert pearsonr.statistic > 0.8 and pearsonr.pvalue < 0.01

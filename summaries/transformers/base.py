@@ -53,7 +53,10 @@ class _PredictorTransformer(BaseEstimator):
 
     def transform(self, data: np.ndarray) -> np.ndarray:
         method = self._method or "predict"
-        return getattr(self.predictor, method)(data)
+        prediction: np.ndarray = getattr(self.predictor, method)(data)
+        # Some predictors, such as MLPRegressor may omit the trailing dimension. Reshape to ensure
+        # it is there for subsequent pipeline steps.
+        return prediction.reshape((*data.shape[:-1], -1))
 
 
 class _DataDependentTransformerMixin(BaseEstimator):
