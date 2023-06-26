@@ -4,7 +4,7 @@ from scipy.spatial import KDTree
 from sklearn.base import BaseEstimator
 from sklearn.exceptions import NotFittedError
 from sklearn.utils.validation import check_array
-from typing import Optional
+from typing import Any, Optional
 
 
 class NearestNeighborAlgorithm(BaseEstimator):
@@ -37,12 +37,13 @@ class NearestNeighborAlgorithm(BaseEstimator):
         self.params_ = params
         return self
 
-    def predict(self, data: np.ndarray) -> np.ndarray:
+    def predict(self, data: np.ndarray, **kwargs: Any) -> np.ndarray:
         """
         Draw approximate posterior samples.
 
         Args:
             data: Data to condition on with shape `(batch_size, n_features)`.
+            **kwargs: Keyword arguments passed to the KDTree query method.
 
         Returns:
             Dictionary of posterior samples. Each value has shape
@@ -55,6 +56,6 @@ class NearestNeighborAlgorithm(BaseEstimator):
 
         data = check_array(data)
         n_samples = int(self.frac * self.tree_.n)
-        _, idx = self.tree_.query(data, k=n_samples, p=self.minkowski_norm)
+        _, idx = self.tree_.query(data, k=n_samples, p=self.minkowski_norm, **kwargs)
 
         return self.params_[idx]
