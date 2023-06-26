@@ -1,7 +1,9 @@
 from cook import create_task
 import json
 from pathlib import Path
+from summaries.scripts.infer import INFERENCE_CONFIGS
 from summaries.scripts.train_transformer import TRAIN_CONFIGS
+from typing import Dict
 
 
 create_task("requirements", action="pip-compile -v", targets=["requirements.txt"],
@@ -9,49 +11,84 @@ create_task("requirements", action="pip-compile -v", targets=["requirements.txt"
 
 create_task("tests", action="pytest -v --cov=summaries --cov-report=html --cov-fail-under=100")
 
-# Download and extract the coalescent dataset.
-root = Path("workspace/coal")
-data_root = root / "data"
-url = "https://github.com/tillahoffmann/coaloracle/releases/download/0.2/csv.zip"
-archive = data_root / "coal.zip"
-create_task("coal:download", action=f"curl -Lo {archive} {url}", targets=[archive])
 
-coaloracle = data_root / "coaloracle.csv"
-create_task("coal:extract", dependencies=[archive], action=f"unzip -ojd {data_root} {archive}",
-            targets=[coaloracle])
+COALESCENT_ROOT = root = Path("workspace/coalescent")
 
-# Preprocess the dataset by splitting it train, test, and validation sets.
-splits = {"test": 1_000, "validation": 10_000, "train": 989_000}
-split_targets = {split: data_root / f"{split}.pkl" for split in splits}
-split_args = ' '.join(f"{split}:{size}" for split, size in splits.items())
-action = f"python -m summaries.scripts.preprocess_coal --seed={21} {coaloracle} {data_root} " \
-    f"{split_args}"
-create_task("coal:preprocess", dependencies=[coaloracle], targets=split_targets.values(),
-            action=action)
 
-# Train the two compressors and run posterior inference.
-for config in [config for config in TRAIN_CONFIGS if config.startswith("coal")]:
-    dependencies = [split_targets["train"], split_targets["validation"]]
-    transformer_target = root / f"transformers/{config}.pkl"
-    action = ["python", "-m", "summaries.scripts.train_transformer", config, *dependencies,
-              transformer_target]
-    create_task(f"coal:train:{config}", dependencies=dependencies, action=action,
-                targets=[transformer_target])
+def prepare_coalescent_data() -> Dict[str, Path]:
+    """
+    Download, extract, and preprocess the coalescent dataset.
+    """
+    data_root = COALESCENT_ROOT / "data"
+    url = "https://github.com/tillahoffmann/coaloracle/releases/download/0.2/csv.zip"
+    archive = data_root / "coal.zip"
+    create_task("coalescent:download", action=f"curl -Lo {archive} {url}", targets=[archive])
 
-    dependencies = [split_targets["train"], split_targets["test"], transformer_target]
-    posterior_target = root / f"samples/{config}.pkl"
-    kwargs = {"transformer": str(transformer_target)}
+    coaloracle = data_root / "coaloracle.csv"
+    create_task("coalescent:extract", dependencies=[archive], targets=[coaloracle],
+                action=f"unzip -ojd {data_root} {archive}")
+
+    # Preprocess the dataset by splitting it train, test, and validation sets.
+    splits = {"test": 1_000, "validation": 10_000, "train": 989_000}
+    split_targets = {split: data_root / f"{split}.pkl" for split in splits}
+    split_args = ' '.join(f"{split}:{size}" for split, size in splits.items())
+    action = f"python -m summaries.scripts.preprocess_coalescent --seed={21} {coaloracle} " \
+        f"{data_root} {split_args}"
+    create_task("coalescent:preprocess", dependencies=[coaloracle], targets=split_targets.values(),
+                action=action)
+
+    return split_targets
+
+
+def train_coalescent_transformers(splits: Dict[str, Path]) -> Dict[str, Path]:
+    """
+    Train transformers for the coalescent dataset.
+    """
+    dependencies = [splits["train"], splits["validation"]]
+    targets = {}
+    for config in TRAIN_CONFIGS:
+        if not config.startswith("Coalescent"):
+            continue
+
+        transformer_target = COALESCENT_ROOT / f"transformers/{config}.pkl"
+        action = ["python", "-m", "summaries.scripts.train_transformer", config, *dependencies,
+                  transformer_target]
+        create_task(f"coalescent:train:{config}", dependencies=dependencies, action=action,
+                    targets=[transformer_target])
+
+        targets[config] = transformer_target
+    return targets
+
+
+def infer_coalescent_posterior(splits: Dict[str, Path], config: str,
+                               transformer: Path | None = None) -> None:
+    dependencies = [splits["train"], splits["test"]]
+    name = config
+    if transformer:
+        dependencies.append(transformer)
+        kwargs = {"transformer": str(transformer)}
+        name = f"{config}-{transformer.with_suffix('').name}"
+    else:
+        kwargs = {}
+
+    posterior_target = COALESCENT_ROOT / f"samples/{name}.pkl"
     action = [
         "python", "-m", "summaries.scripts.infer", "--transformer-kwargs", json.dumps(kwargs),
-        "coal-neural", *dependencies[:2], posterior_target,
+        config, *dependencies[:2], posterior_target,
     ]
-    create_task(f"coal:infer:{config}", dependencies=dependencies, targets=[posterior_target],
+    create_task(f"coalescent:infer:{name}", dependencies=dependencies, targets=[posterior_target],
                 action=action)
 
 
-config = "coal-linear_posterior_mean"
-dependencies = [split_targets["train"], split_targets["test"]]
-posterior_target = root / f"samples/{config}.pkl"
-action = ["python", "-m", "summaries.scripts.infer", config, *dependencies, posterior_target]
-create_task(f"coal:infer:{config}", dependencies=dependencies, targets=[posterior_target],
-            action=action)
+def create_coalescent_tasks() -> None:
+    splits = prepare_coalescent_data()
+    transformers = train_coalescent_transformers(splits)
+    for transformer in transformers.values():
+        infer_coalescent_posterior(splits, "CoalescentNeuralConfig", transformer)
+    for config in INFERENCE_CONFIGS:
+        if not config.startswith("Coalescent") or config == "CoalescentNeuralConfig":
+            continue
+        infer_coalescent_posterior(splits, config)
+
+
+create_coalescent_tasks()
