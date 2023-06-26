@@ -78,17 +78,22 @@ def infer_coalescent_posterior(splits: Dict[str, Path], config: str,
     ]
     create_task(f"coalescent:infer:{name}", dependencies=dependencies, targets=[posterior_target],
                 action=action)
+    return posterior_target
 
 
 def create_coalescent_tasks() -> None:
     splits = prepare_coalescent_data()
+
     transformers = train_coalescent_transformers(splits)
-    for transformer in transformers.values():
-        infer_coalescent_posterior(splits, "CoalescentNeuralConfig", transformer)
-    for config in INFERENCE_CONFIGS:
-        if not config.startswith("Coalescent") or config == "CoalescentNeuralConfig":
-            continue
-        infer_coalescent_posterior(splits, config)
+    sample_targets = {
+        config: infer_coalescent_posterior(splits, "CoalescentNeuralConfig", transformer) for
+        config, transformer in transformers.items()
+    }
+    sample_targets |= {
+        config: infer_coalescent_posterior(splits, config) for config in INFERENCE_CONFIGS if
+        config.startswith("Coalescent") and config != "CoalescentNeuralConfig"
+    }
+    return sample_targets
 
 
 create_coalescent_tasks()
