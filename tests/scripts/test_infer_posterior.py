@@ -5,7 +5,7 @@ from pathlib import Path
 import pickle
 import pytest
 from sklearn.linear_model import LinearRegression
-from summaries.scripts.infer import __main__, INFERENCE_CONFIGS, InferenceConfig
+from summaries.scripts.infer_posterior import __main__, INFERENCE_CONFIGS, InferenceConfig
 from summaries.scripts.preprocess_coalescent import __main__ as __main__preprocess_coalescent
 from summaries.transformers import as_transformer, MinimumConditionalEntropyTransformer, \
     NeuralTransformer, Transformer

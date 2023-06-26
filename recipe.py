@@ -1,7 +1,7 @@
 from cook import create_task
 import json
 from pathlib import Path
-from summaries.scripts.infer import INFERENCE_CONFIGS
+from summaries.scripts.infer_posterior import INFERENCE_CONFIGS
 from summaries.scripts.train_transformer import TRAIN_CONFIGS
 from typing import Dict
 
