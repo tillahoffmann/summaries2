@@ -50,7 +50,7 @@ class CoalescentMinimumConditionalEntropyConfig(CoalescentConfig):
     IS_DATA_DEPENDENT = True
 
     def create_transformer(self, observed_data: np.ndarray) -> Transformer:
-        return MinimumConditionalEntropyTransformer(observed_data, self.FRAC)
+        return MinimumConditionalEntropyTransformer(observed_data, self.FRAC, thin=10)
 
 
 class CoalescentLinearPosteriorMeanConfig(CoalescentConfig):
