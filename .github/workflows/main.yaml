@@ -16,14 +16,16 @@ jobs:
         with:
           python-version: '3.10'
           cache: pip
+      - name: Install pybind11 and fasttr.
+        run: |
+          pip install `grep pybind11== requirements.txt` `grep wheel== requirements.txt`
+          pip install --no-build-isolation `grep -oE 'git\+.*?fasttr.git@\w+' requirements.txt`
       - name: Install Python dependencies.
         env:
           PIP_EXTRA_INDEX_URL: https://download.pytorch.org/whl/cpu
         run: |
           # Install torch first because we need the headers for torch-scatter, etc.
-          pip install --no-compile --no-deps `cat requirements.txt | grep torch==`
-          # Install pybind11 first because we need the package for fasttr.
-          pip install --no-compile --no-deps `cat requirements.txt | grep pybind11==`
+          pip install --no-compile --no-deps `grep torch== requirements.txt`
           # Install the remaining dependencies.
           pip install --no-compile --no-deps -r requirements.txt
       - name: Lint the code.
