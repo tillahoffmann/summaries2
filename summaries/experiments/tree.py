@@ -102,7 +102,7 @@ class TreeKernelPosterior(BaseEstimator):
         # Find the maximum a posteriori estimate.
         result: optimize.OptimizeResult = optimize.minimize_scalar(
             lambda gamma: - self._log_target(gamma), method="bounded",
-            bounds=[self.prior.a, self.prior.b],
+            bounds=self.prior.support(),
         )
         assert result.success
         self.map_estimate_ = result.x
@@ -110,7 +110,7 @@ class TreeKernelPosterior(BaseEstimator):
         assert abs(self._log_target(self.map_estimate_)) < 1e-9
 
         # Integrate to find the normalization constant.
-        norm, *_ = integrate.quad(lambda x: np.exp(self._log_target(x)), self.prior.a, self.prior.b)
+        norm, *_ = integrate.quad(lambda x: np.exp(self._log_target(x)), *self.prior.support())
         self._log_norm = np.log(norm)
         return self
 
@@ -131,7 +131,7 @@ class TreeKernelPosterior(BaseEstimator):
         n_candidates = 2 * self.n_samples
         while len(samples) < self.n_samples:
             # Sample candidates uniformly from the domain of the prior.
-            gamma = np.random.uniform(self.prior.a, self.prior.b, n_candidates)
+            gamma = np.random.uniform(*self.prior.support(), n_candidates)
             # Sample candidates uniformly at random. We don't need to do any scaling because, after
             # fitting, the maximum of `_log_target` is zero.
             p = np.log(np.random.uniform(0, 1, n_candidates) + 1e-12)

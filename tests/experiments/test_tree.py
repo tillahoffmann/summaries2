@@ -26,7 +26,7 @@ def test_tree_posterior() -> None:
     posterior.fit(tree)
 
     # Check normalization of the posterior.
-    lin = np.linspace(prior.a, prior.b, 200)
+    lin = np.linspace(*prior.support(), 200)
     log_prob = posterior.log_prob(lin)
     assert (np.trapz(np.exp(log_prob), lin) - 1) < 0.01
 

@@ -26,7 +26,7 @@ def __main__(argv: List[str] | None = None) -> None:
 
     # Evaluate a high-fidelity numerical posterior on the prior support so we can sample from it
     # approximately later.
-    lin = np.linspace(prior.a, prior.b, 500)
+    lin = np.linspace(*prior.support(), 500)
 
     with args.observed.open("rb") as fp:
         observed = pickle.load(fp)
