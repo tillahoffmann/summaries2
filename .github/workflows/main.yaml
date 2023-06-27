@@ -21,13 +21,7 @@ jobs:
           pip install `grep pybind11== requirements.txt` `grep wheel== requirements.txt`
           pip install --no-build-isolation `grep -oE 'git\+.*?fasttr.git@\w+' requirements.txt`
       - name: Install Python dependencies.
-        env:
-          PIP_EXTRA_INDEX_URL: https://download.pytorch.org/whl/cpu
-        run: |
-          # Install torch first because we need the headers for torch-scatter, etc.
-          pip install --no-compile --no-deps `grep torch== requirements.txt`
-          # Install the remaining dependencies.
-          pip install --no-compile --no-deps -r requirements.txt
+        run: pip install --extra-index-url https://download.pytorch.org/whl/cpu --no-compile --no-deps -r requirements.txt
       - name: Lint the code.
         run: flake8
       - name: Run the tests.
