@@ -3,8 +3,7 @@ import numpy as np
 from typing import Any, Tuple
 
 
-def simulate_graph(n_nodes: int, gamma: int | None = None, seed: Any | None = None) \
-        -> Tuple[nx.DiGraph, float]:
+def simulate_graph(n_nodes: int, gamma: float, seed: Any | None = None) -> Tuple[nx.DiGraph, float]:
     """
     Simulate a preferential attachment graph with power attachment kernel.
 
@@ -14,10 +13,9 @@ def simulate_graph(n_nodes: int, gamma: int | None = None, seed: Any | None = No
         seed: Random number generator seed.
 
     Returns:
-        Tuple of graph generated using a power attachment kernel and power exponent.
+        Graph generated using a power attachment kernel with exponent `gamma`.
     """
-    gamma = np.random.normal(0, 2) if gamma is None else gamma
-    return nx.gn_graph(n_nodes, lambda k: k ** gamma, seed=seed), gamma
+    return nx.gn_graph(n_nodes, lambda k: k ** gamma, seed=seed)
 
 
 def compress_graph(graph: nx.DiGraph) -> np.ndarray:
