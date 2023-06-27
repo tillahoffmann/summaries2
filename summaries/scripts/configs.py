@@ -4,7 +4,7 @@ from scipy import stats
 from tqdm import tqdm
 from typing import Any, Dict
 
-from ..experiments.graph import compress_graph, simulate_graph
+from ..experiments.tree import compress_tree, simulate_tree
 
 
 class SimulationArgs:
@@ -22,7 +22,7 @@ class SimulationConfig:
         raise NotImplementedError
 
 
-class GraphSimulationConfig(SimulationConfig):
+class TreeSimulationConfig(SimulationConfig):
     N_SAMPLES = 100
     N_NODES = 748
     PRIOR = stats.uniform(0, 2)
@@ -33,8 +33,8 @@ class GraphSimulationConfig(SimulationConfig):
         simulations = {}
         for _ in tqdm(range(n_samples)):
             gamma = self.PRIOR.rvs(random_state=random_state)
-            graph = simulate_graph(self.N_NODES, gamma, seed=random_state)
-            simulations.setdefault("data", []).append(compress_graph(graph))
+            tree = simulate_tree(self.N_NODES, gamma, seed=random_state)
+            simulations.setdefault("data", []).append(compress_tree(tree))
             simulations.setdefault("params", []).append(gamma)
 
         # Reshape to match the shape expected by subsequent steps.

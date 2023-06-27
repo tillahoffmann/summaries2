@@ -4,11 +4,11 @@ from pathlib import Path
 import pickle
 from typing import List
 
-from .configs import SimulationArgs, SimulationConfig, GraphSimulationConfig
+from .configs import SimulationArgs, SimulationConfig, TreeSimulationConfig
 
 
 SIMULATION_CONFIGS = [
-    GraphSimulationConfig,
+    TreeSimulationConfig,
 ]
 SIMULATION_CONFIGS = {config.__name__: config for config in SIMULATION_CONFIGS}
 

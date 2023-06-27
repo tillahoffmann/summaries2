@@ -14,7 +14,7 @@ create_task("tests", action="pytest -v --cov=summaries --cov-report=html --cov-f
 
 ROOT = Path("workspace")
 COALESCENT_ROOT = ROOT / "coalescent"
-GRAPH_ROOT = ROOT / "graph"
+TREE_ROOT = ROOT / "tree"
 
 
 def prepare_coalescent_data() -> Dict[str, Path]:
@@ -98,22 +98,22 @@ def create_coalescent_tasks() -> Dict[str, Path]:
     return sample_targets
 
 
-def simulate_graph_data() -> Dict[str, Path]:
-    data_root = GRAPH_ROOT / "data"
+def simulate_tree_data() -> Dict[str, Path]:
+    data_root = TREE_ROOT / "data"
 
     split_paths = {}
     splits = {"train": (100_000, 0), "validation": (1_000, 1), "test": (1_000, 2)}
     for split, (n_samples, seed) in splits.items():
         target = data_root / f"{split}.pkl"
         action = ["python", "-m", "summaries.scripts.simulate_data", f"--n-samples={n_samples}",
-                  f"--seed={seed}", "GraphSimulationConfig", target]
-        create_task(f"graph:data:{split}", targets=[target], action=action)
+                  f"--seed={seed}", "TreeSimulationConfig", target]
+        create_task(f"tree:data:{split}", targets=[target], action=action)
         split_paths[split] = target
     return split_paths
 
 
-def create_graph_tasks() -> None:
-    splits = simulate_graph_data()
+def create_tree_tasks() -> None:
+    splits = simulate_tree_data()
     return {
         config: infer_posterior(splits, config, "tree") for config in INFERENCE_CONFIGS if
         config.startswith("Tree") and config != "TreeNeuralConfig"
@@ -121,4 +121,4 @@ def create_graph_tasks() -> None:
 
 
 create_coalescent_tasks()
-create_graph_tasks()
+create_tree_tasks()

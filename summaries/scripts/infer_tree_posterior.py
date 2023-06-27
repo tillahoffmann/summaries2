@@ -7,8 +7,8 @@ import pickle
 from tqdm import tqdm
 from typing import List
 
-from ..experiments.graph import expand_graph, TreeKernelPosterior
-from .configs import GraphSimulationConfig
+from ..experiments.tree import expand_tree, TreeKernelPosterior
+from .configs import TreeSimulationConfig
 
 
 def __main__(argv: List[str] | None = None) -> None:
@@ -17,7 +17,7 @@ def __main__(argv: List[str] | None = None) -> None:
     parser.add_argument("output", help="path to output file", type=Path)
     args = parser.parse_args(argv)
 
-    prior = GraphSimulationConfig.PRIOR
+    prior = TreeSimulationConfig.PRIOR
 
     # Use 101 elements just to catch accidental issues with tensor shapes.
     lin = np.linspace(prior.a, prior.b, 101)
@@ -28,8 +28,8 @@ def __main__(argv: List[str] | None = None) -> None:
 
     result = {}
     for gamma, predecessors in tqdm(zip(observed["params"], observed["data"]), total=n_observed):
-        graph = nx.to_undirected(expand_graph(predecessors))
-        posterior = TreeKernelPosterior(prior).fit(graph)
+        tree = nx.to_undirected(expand_tree(predecessors))
+        posterior = TreeKernelPosterior(prior).fit(tree)
         log_prob = posterior.log_prob(lin)
 
         result.setdefault("map_estimate", []).append(posterior.map_estimate_)

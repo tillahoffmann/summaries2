@@ -8,9 +8,9 @@ from sklearn.exceptions import NotFittedError
 from typing import Any, Tuple
 
 
-def simulate_graph(n_nodes: int, gamma: float, seed: Any | None = None) -> Tuple[nx.DiGraph, float]:
+def simulate_tree(n_nodes: int, gamma: float, seed: Any | None = None) -> Tuple[nx.DiGraph, float]:
     """
-    Simulate a preferential attachment graph with power attachment kernel.
+    Simulate a preferential attachment tree with power attachment kernel.
 
     Args:
         n_nodes: Number of nodes
@@ -18,35 +18,35 @@ def simulate_graph(n_nodes: int, gamma: float, seed: Any | None = None) -> Tuple
         seed: Random number generator seed.
 
     Returns:
-        Graph generated using a power attachment kernel with exponent `gamma`.
+        Tree generated using a power attachment kernel with exponent `gamma`.
     """
     return nx.gn_graph(n_nodes, lambda k: k ** gamma, seed=seed)
 
 
-def compress_graph(graph: nx.DiGraph) -> np.ndarray:
+def compress_tree(tree: nx.DiGraph) -> np.ndarray:
     """
-    Compress a growing-network digraph to an array of predecessors.
+    Compress a growing tree to an array of predecessors.
 
     Args:
-        graph: Graph to compress.
+        tree: Tree to compress.
 
     Returns:
         Vector of `n_nodes - 1` predecessors, starting with the predecessor of node `1`.
     """
-    edges = np.asarray(list(graph.edges))
+    edges = np.asarray(list(tree.edges))
     idx = np.argsort(edges[:, 0])
     return edges[idx, 1]
 
 
-def expand_graph(predecessors: np.ndarray) -> nx.DiGraph:
+def expand_tree(predecessors: np.ndarray) -> nx.DiGraph:
     """
-    Expand an array of predecessors to a digraph.
+    Expand an array of predecessors to a tree.
 
     Args:
         predecessors: Array of predecessors, starting with the predecessor for node 1.
 
     Returns:
-        Reconstructed digraph.
+        Reconstructed tree.
     """
     return nx.DiGraph(list(enumerate(predecessors, 1)))
 
@@ -60,14 +60,14 @@ class TreeKernelPosterior(BaseEstimator):
         n_history_samples: Number of histories to infer.
 
     Attributes:
-        graph_: Graph the estimator was fit to.
+        tree_: Tree the estimator was fit to.
         map_estimate_: Maximum a posteriori estimate of the power exponent.
     """
     def __init__(self, prior: stats.rv_continuous, n_history_samples: int = 100):
         self.prior = prior
         self.n_history_samples = n_history_samples
 
-        self.graph_: nx.Graph | None = None
+        self.tree_: nx.Tree | None = None
         self.map_estimate_: float | None = None
 
         self._sampler: HistorySampler | None = None
@@ -87,9 +87,9 @@ class TreeKernelPosterior(BaseEstimator):
             + self.prior.logpdf(gamma) - self._max_log_density
         return log_prob
 
-    def fit(self, graph: nx.Graph) -> TreeKernelPosterior:
-        self.graph_ = graph
-        self._sampler = HistorySampler(graph)
+    def fit(self, tree: nx.Tree) -> TreeKernelPosterior:
+        self.tree_ = tree
+        self._sampler = HistorySampler(tree)
         self._sampler.sample(self.n_history_samples)
 
         # Find the maximum a posteriori estimate.
