@@ -36,6 +36,8 @@ def test_tree_posterior() -> None:
 
 def test_tree_posterior_not_fitted() -> None:
     with pytest.raises(NotFittedError):
+        TreeKernelPosterior(stats.uniform(0, 1)).predict(None)
+    with pytest.raises(NotFittedError):
         TreeKernelPosterior(stats.uniform(0, 1))._log_target(0.5)
     with pytest.raises(NotFittedError):
         TreeKernelPosterior(stats.uniform(0, 1)).log_prob(0.5)
