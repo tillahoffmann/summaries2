@@ -11,16 +11,22 @@ from ..experiments.tree import expand_tree, TreeKernelPosterior
 from .configs import TreeSimulationConfig
 
 
+class InferTreePosteriorArgs:
+    observed: Path
+    output: Path
+
+
 def __main__(argv: List[str] | None = None) -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("observed", help="path to observed data", type=Path)
     parser.add_argument("output", help="path to output file", type=Path)
-    args = parser.parse_args(argv)
+    args: InferTreePosteriorArgs = parser.parse_args(argv)
 
     prior = TreeSimulationConfig.PRIOR
 
-    # Use 101 elements just to catch accidental issues with tensor shapes.
-    lin = np.linspace(prior.a, prior.b, 101)
+    # Evaluate a high-fidelity numerical posterior on the prior support so we can sample from it
+    # approximately later.
+    lin = np.linspace(prior.a, prior.b, 500)
 
     with args.observed.open("rb") as fp:
         observed = pickle.load(fp)

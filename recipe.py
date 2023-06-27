@@ -112,12 +112,28 @@ def simulate_tree_data() -> Dict[str, Path]:
     return split_paths
 
 
+def infer_tree_posterior_with_history_sampler(splits: Dict[str, Path]) -> Path:
+    config = "TreeKernelHistorySamplerConfig"
+    posterior_target = ROOT / f"tree/samples/{config}.pkl"
+    action = [
+        "python", "-m", "summaries.scripts.infer_tree_posterior", splits["test"], 1_000,
+        posterior_target,
+    ]
+    create_task(f"tree:infer:{config}", dependencies=[splits["test"]], targets=[posterior_target],
+                action=action)
+    return posterior_target
+
+
 def create_tree_tasks() -> None:
     splits = simulate_tree_data()
-    return {
+    samples = {
+        "TreeKernelHistorySamplerConfig": infer_tree_posterior_with_history_sampler(splits),
+    }
+    samples |= {
         config: infer_posterior(splits, config, "tree") for config in INFERENCE_CONFIGS if
         config.startswith("Tree") and config != "TreeNeuralConfig"
     }
+    return samples
 
 
 create_coalescent_tasks()
