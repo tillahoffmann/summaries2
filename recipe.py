@@ -62,8 +62,8 @@ def train_coalescent_transformers(splits: Dict[str, Path]) -> Dict[str, Path]:
     return targets
 
 
-def infer_coalescent_posterior(splits: Dict[str, Path], config: str,
-                               transformer: Path | None = None) -> None:
+def infer_posterior(splits: Dict[str, Path], config: str, category: str,
+                    transformer: Path | None = None) -> Path:
     dependencies = [splits["train"], splits["test"]]
     name = config
     if transformer:
@@ -73,12 +73,12 @@ def infer_coalescent_posterior(splits: Dict[str, Path], config: str,
     else:
         kwargs = {}
 
-    posterior_target = COALESCENT_ROOT / f"samples/{name}.pkl"
+    posterior_target = ROOT / f"{category}/samples/{name}.pkl"
     action = [
-        "python", "-m", "summaries.scripts.infer", "--transformer-kwargs", json.dumps(kwargs),
-        config, *dependencies[:2], posterior_target,
+        "python", "-m", "summaries.scripts.infer_posterior", "--transformer-kwargs",
+        json.dumps(kwargs), config, *dependencies[:2], posterior_target,
     ]
-    create_task(f"coalescent:infer:{name}", dependencies=dependencies, targets=[posterior_target],
+    create_task(f"{category}:infer:{name}", dependencies=dependencies, targets=[posterior_target],
                 action=action)
     return posterior_target
 
@@ -88,11 +88,11 @@ def create_coalescent_tasks() -> Dict[str, Path]:
 
     transformers = train_coalescent_transformers(splits)
     sample_targets = {
-        config: infer_coalescent_posterior(splits, "CoalescentNeuralConfig", transformer) for
+        config: infer_posterior(splits, "CoalescentNeuralConfig", "coalescent", transformer) for
         config, transformer in transformers.items()
     }
     sample_targets |= {
-        config: infer_coalescent_posterior(splits, config) for config in INFERENCE_CONFIGS if
+        config: infer_posterior(splits, config, "coalescent") for config in INFERENCE_CONFIGS if
         config.startswith("Coalescent") and config != "CoalescentNeuralConfig"
     }
     return sample_targets
@@ -101,16 +101,23 @@ def create_coalescent_tasks() -> Dict[str, Path]:
 def simulate_graph_data() -> Dict[str, Path]:
     data_root = GRAPH_ROOT / "data"
 
+    split_paths = {}
     splits = {"train": (100_000, 0), "validation": (1_000, 1), "test": (1_000, 2)}
     for split, (n_samples, seed) in splits.items():
         target = data_root / f"{split}.pkl"
         action = ["python", "-m", "summaries.scripts.simulate_data", f"--n-samples={n_samples}",
                   f"--seed={seed}", "GraphSimulationConfig", target]
         create_task(f"graph:data:{split}", targets=[target], action=action)
+        split_paths[split] = target
+    return split_paths
 
 
 def create_graph_tasks() -> None:
-    simulate_graph_data()
+    splits = simulate_graph_data()
+    return {
+        config: infer_posterior(splits, config, "tree") for config in INFERENCE_CONFIGS if
+        config.startswith("Tree") and config != "TreeNeuralConfig"
+    }
 
 
 create_coalescent_tasks()

@@ -6,7 +6,7 @@ from pathlib import Path
 import pickle
 from sklearn.linear_model import LinearRegression
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import FunctionTransformer, StandardScaler
 from torch import no_grad
 from tqdm import tqdm
 from typing import Any, Dict, List, Optional
@@ -64,10 +64,30 @@ class CoalescentNeuralConfig(CoalescentConfig):
             return pickle.load(fp)["transformer"]
 
 
+class TreeKernelConfig(InferenceConfig):
+    FRAC = 0.01
+
+
+class TreeKernelExpertSummaryConfig(TreeKernelConfig):
+    """
+    Draw samples using "expert" summary statistics designed for growing trees.
+    """
+    def create_transformer(self, observed_data: Any | None = None) -> Transformer:
+        return FunctionTransformer(self._evaluate_summaries)
+
+    def _evaluate_summaries(self, observed_data: np.ndarray) -> np.ndarray:
+        summaries = []
+        for predecessors in observed_data:
+            in_degrees = np.bincount(predecessors, minlength=observed_data.shape[-1] + 1)
+            summaries.append((in_degrees.std(),))
+        return np.asarray(summaries)
+
+
 INFERENCE_CONFIGS = [
     CoalescentLinearPosteriorMeanConfig,
     CoalescentMinimumConditionalEntropyConfig,
     CoalescentNeuralConfig,
+    TreeKernelExpertSummaryConfig,
 ]
 INFERENCE_CONFIGS = {config.__name__: config for config in INFERENCE_CONFIGS}
 
