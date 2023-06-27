@@ -102,7 +102,7 @@ def simulate_tree_data() -> Dict[str, Path]:
     data_root = TREE_ROOT / "data"
 
     split_paths = {}
-    splits = {"train": (100_000, 0), "validation": (1_000, 1), "test": (1_000, 2)}
+    splits = {"train": (100_000, 0), "validation": (1_000, 1), "test": (1_000, 2), "debug": (10, 3)}
     for split, (n_samples, seed) in splits.items():
         target = data_root / f"{split}.pkl"
         action = ["python", "-m", "summaries.scripts.simulate_data", f"--n-samples={n_samples}",
