@@ -57,15 +57,19 @@ class TreeKernelPosterior(BaseEstimator):
     https://doi.org/10.1103/PhysRevLett.126.038301 for details).
 
     Args:
+        prior: Prior for the power attachment kernel exponent.
         n_history_samples: Number of histories to infer.
+        n_samples: Number of posterior samples to draw using rejection sampling.
 
     Attributes:
         tree_: Tree the estimator was fit to.
         map_estimate_: Maximum a posteriori estimate of the power exponent.
     """
-    def __init__(self, prior: stats.rv_continuous, n_history_samples: int = 100):
+    def __init__(self, prior: stats.rv_continuous, *, n_history_samples: int = 100,
+                 n_samples: int = 100) -> None:
         self.prior = prior
         self.n_history_samples = n_history_samples
+        self.n_samples = n_samples
 
         self.tree_: nx.Tree | None = None
         self.map_estimate_: float | None = None
@@ -81,6 +85,9 @@ class TreeKernelPosterior(BaseEstimator):
         """
         if not self._sampler:
             raise NotFittedError
+        # Broadcast manually if gamma is an array.
+        if isinstance(gamma, np.ndarray):
+            return np.reshape([self._log_target(x) for x in np.ravel(gamma)], np.shape(gamma))
         self._sampler.set_kernel(kernel=lambda k: k ** gamma)
         log_likelihoods = self._sampler.get_log_posterior()
         log_prob = special.logsumexp(log_likelihoods) - np.log(self.n_history_samples) \
@@ -113,6 +120,31 @@ class TreeKernelPosterior(BaseEstimator):
         """
         if self._log_norm is None:
             raise NotFittedError
-        if isinstance(gamma, float):
-            return self._log_target(gamma) - self._log_norm
-        return np.reshape([self.log_prob(x) for x in np.ravel(gamma)], np.shape(gamma))
+        return self._log_target(gamma) - self._log_norm
+
+    def predict(self, data: nx.Graph) -> None:
+        if not self.tree_:
+            raise NotFittedError
+        assert data is self.tree_, "Can only make predictions about the tree the estimator was " \
+            "fit to."
+        samples = []
+        n_candidates = 2 * self.n_samples
+        while len(samples) < self.n_samples:
+            # Sample candidates uniformly from the domain of the prior.
+            gamma = np.random.uniform(self.prior.a, self.prior.b, n_candidates)
+            # Sample candidates uniformly at random. We don't need to do any scaling because, after
+            # fitting, the maximum of `_log_target` is zero.
+            p = np.log(np.random.uniform(0, 1, n_candidates) + 1e-12)
+            # Accept samples where p is below the target.
+            accept = p < self._log_target(gamma)
+            samples.extend(gamma[accept])
+
+            # Estimate the acceptance probability and scale up the rejection sample size
+            # accordingly (up to an order of magnitude more than the samples we requested).
+            remaining = self.n_samples - len(samples)
+            accept_frac = max(np.mean(accept), 1 / self.n_samples)
+            n_candidates = int(min(remaining / accept_frac, 10 * self.n_samples))
+
+        # Only retain as many samples as requested and add an extra parameter dimension for
+        # consistency with multi-dimensional parameters.
+        return np.asarray(samples)[:self.n_samples, None]

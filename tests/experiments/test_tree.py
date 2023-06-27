@@ -22,13 +22,16 @@ def test_compress_expand_tree() -> None:
 def test_tree_posterior() -> None:
     tree = simulate_tree(127, 0.5)
     prior = stats.uniform(0.2, 0.9)
-    posterior = TreeKernelPosterior(prior)
+    posterior = TreeKernelPosterior(prior, n_samples=57)
     posterior.fit(tree)
 
-    # Check normalization of posterior.
+    # Check normalization of the posterior.
     lin = np.linspace(prior.a, prior.b, 200)
     log_prob = posterior.log_prob(lin)
     assert (np.trapz(np.exp(log_prob), lin) - 1) < 0.01
+
+    # Draw a few samples using rejection sampling.
+    assert posterior.predict(tree).shape == (57, 1)
 
 
 def test_tree_posterior_not_fitted() -> None:
