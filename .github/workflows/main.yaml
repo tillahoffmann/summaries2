@@ -16,6 +16,10 @@ jobs:
         with:
           python-version: '3.10'
           cache: pip
+      - name: Install pybind11 and fasttr.
+        run: |
+          pip install `grep pybind11== requirements.txt` `grep wheel== requirements.txt`
+          pip install --no-build-isolation `grep -oE 'git\+.*?fasttr.git@\w+' requirements.txt`
       - name: Install Python dependencies.
         run: pip install --extra-index-url https://download.pytorch.org/whl/cpu --no-compile --no-deps -r requirements.txt
       - name: Lint the code.

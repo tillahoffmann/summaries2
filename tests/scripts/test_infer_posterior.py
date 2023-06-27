@@ -7,6 +7,8 @@ import pytest
 from sklearn.linear_model import LinearRegression
 from summaries.scripts.infer_posterior import __main__, INFERENCE_CONFIGS, InferenceConfig
 from summaries.scripts.preprocess_coalescent import __main__ as __main__preprocess_coalescent
+from summaries.scripts.simulate_data import __main__ as __main__simulate_data
+from summaries.scripts.configs import TreeSimulationConfig
 from summaries.transformers import as_transformer, MinimumConditionalEntropyTransformer, \
     NeuralTransformer, Transformer
 from torch import nn
@@ -98,3 +100,25 @@ def test_coalescent_infer(config: str, tmp_path: Path) -> None:
         result = pickle.load(fp)
 
     assert result["samples"].shape == (2, 9, 2)
+
+
+@pytest.mark.parametrize("config", [x for x in INFERENCE_CONFIGS if x.startswith("Tree")])
+def test_tree_infer(config: str, tmp_path: Path) -> None:
+    # Generate some data.
+    simulated_path = tmp_path / "simulated.pkl"
+    observed_path = tmp_path / "observed.pkl"
+
+    with mock.patch.object(TreeSimulationConfig, "N_NODES", 17):
+        __main__simulate_data(["--n-samples=37", "TreeSimulationConfig", str(simulated_path)])
+        __main__simulate_data(["--n-samples=5", "TreeSimulationConfig", str(observed_path)])
+
+    output_path = tmp_path / "output.pkl"
+    argv = [config, tmp_path / "simulated.pkl", tmp_path / "observed.pkl", output_path]
+
+    with mock.patch.object(INFERENCE_CONFIGS[config], "FRAC", 0.1):
+        __main__(map(str, argv))
+
+    with output_path.open("rb") as fp:
+        output = pickle.load(fp)
+
+    assert output["samples"].shape == (5, 3, 1)
