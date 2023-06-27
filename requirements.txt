@@ -48,7 +48,7 @@ comm==0.1.3
     # via ipykernel
 contourpy==1.1.0
     # via matplotlib
-cook-build==0.2.1
+cook-build==0.2.2
     # via -r requirements.in
 coverage[toml]==7.2.7
     # via pytest-cov
