@@ -46,7 +46,7 @@ def __main__(argv: List[str] | None = None) -> None:
             # is necessary in rare cases because the normalization evaluated using `quad` in the
             # `fit` method of `TreeKernelPosterior` may differ numerically from the `trapz`
             # integration used by `sample_empirical_pdf`.
-            samples = sample_empirical_pdf(lin, np.exp(log_prob), args.n_samples, tol=1e-3)
+            samples = sample_empirical_pdf(lin, np.exp(log_prob), args.n_samples, tol=0.1)
             result.setdefault("samples", []).append(samples)
 
         result.setdefault("map_estimate", []).append(posterior.map_estimate_)
