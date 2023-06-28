@@ -44,11 +44,19 @@ def test_tree_posterior_not_fitted() -> None:
 
 
 def test_evaluate_gini() -> None:
+    x = np.ones(1000)
+    np.testing.assert_allclose(evaluate_gini(x), 0)
+
+    x[0] = 1e9
+    assert evaluate_gini(x) > 0.99
+
     # Compare the Gini coefficients between a uniform and heavy-tailed distribution. The latter
     # should have a larger Gini.
     u = np.random.uniform(0, 1, 1000)
     h = np.exp(np.random.normal(0, 1, 1000))
     assert evaluate_gini(u) < evaluate_gini(h)
+    assert 0 < evaluate_gini(u)
+    assert 0 < evaluate_gini(h)
 
     # Should be invariant under rescaling.
     np.testing.assert_allclose(evaluate_gini(h), evaluate_gini(10 * h))

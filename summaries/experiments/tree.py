@@ -162,4 +162,5 @@ def evaluate_gini(x: np.ndarray) -> float:
         Gini coefficient.
     """
     n = x.size
+    x = np.sort(x)
     return 1 - 2 / (n - 1) * (n - (1 + np.arange(n)) @ x / x.sum())
