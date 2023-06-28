@@ -8,17 +8,20 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from summaries.algorithm import NearestNeighborAlgorithm
 from summaries.transformers import as_transformer
-from typing import Type
+from typing import Any, Dict, Type
 
 
-@pytest.mark.parametrize("predictor_cls", [LinearRegression, MLPRegressor])
+@pytest.mark.parametrize("predictor_cls, predictor_kwargs", [
+    (LinearRegression, {}),
+    (MLPRegressor, {"max_iter": 1}),
+])
 def test_pipeline_posterior_mean_correlation(
         simulated_data: np.ndarray, simulated_params: np.ndarray, observed_data: np.ndarray,
         latent_params: np.ndarray, predictor_cls: Type[BaseEstimator],
-        ) -> None:
+        predictor_kwargs: Dict[str, Any]) -> None:
     pipeline = Pipeline([
         ("standardize_data", StandardScaler()),
-        ("learn_posterior_mean", as_transformer(predictor_cls)()),
+        ("learn_posterior_mean", as_transformer(predictor_cls)(**predictor_kwargs)),
         ("standardize_summaries", StandardScaler()),
         ("sample_posterior", NearestNeighborAlgorithm(frac=0.01)),
     ])
