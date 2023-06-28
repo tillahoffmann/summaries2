@@ -116,7 +116,8 @@ def infer_tree_posterior_with_history_sampler(splits: Dict[str, Path]) -> Path:
     config = "TreeKernelHistorySamplerConfig"
     posterior_target = ROOT / f"tree/samples/{config}.pkl"
     action = [
-        "python", "-m", "summaries.scripts.infer_tree_posterior", splits["test"], posterior_target,
+        "python", "-m", "summaries.scripts.infer_tree_posterior", "--n-samples=1000",
+        splits["test"], posterior_target,
     ]
     create_task(f"tree:infer:{config}", dependencies=[splits["test"]], targets=[posterior_target],
                 action=action)

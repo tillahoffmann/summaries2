@@ -4,6 +4,7 @@ import networkx as nx
 import numpy as np
 from pathlib import Path
 import pickle
+from snippets.empirical_distribution import sample_empirical_pdf
 from tqdm import tqdm
 from typing import List
 
@@ -12,12 +13,14 @@ from .configs import TreeSimulationConfig
 
 
 class InferTreePosteriorArgs:
+    n_samples: int | None
     observed: Path
     output: Path
 
 
 def __main__(argv: List[str] | None = None) -> None:
     parser = argparse.ArgumentParser()
+    parser.add_argument("--n-samples", type=int, help="number of posterior samples to draw")
     parser.add_argument("observed", help="path to observed data", type=Path)
     parser.add_argument("output", help="path to output file", type=Path)
     args: InferTreePosteriorArgs = parser.parse_args(argv)
@@ -37,6 +40,10 @@ def __main__(argv: List[str] | None = None) -> None:
         tree = nx.to_undirected(expand_tree(predecessors))
         posterior = TreeKernelPosterior(prior).fit(tree)
         log_prob = posterior.log_prob(lin)
+
+        if args.n_samples:
+            samples = sample_empirical_pdf(lin, np.exp(log_prob), args.n_samples)
+            result.setdefault("samples", []).append(samples)
 
         result.setdefault("map_estimate", []).append(posterior.map_estimate_)
         result.setdefault("log_prob_actual", []).append(posterior.log_prob(gamma))

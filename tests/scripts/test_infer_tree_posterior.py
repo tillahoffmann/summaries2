@@ -15,7 +15,7 @@ def test_infer_tree_posterior(tmp_path: Path) -> None:
 
     with mock.patch.object(TreeSimulationConfig, "N_NODES", 23):
         __main__simulate_data([f"--n-samples={n}", "TreeSimulationConfig", str(observed_path)])
-        __main__([str(observed_path), str(output_path)])
+        __main__(["--n-samples=13", str(observed_path), str(output_path)])
 
     with observed_path.open("rb") as fp:
         observed = pickle.load(fp)
@@ -29,3 +29,6 @@ def test_infer_tree_posterior(tmp_path: Path) -> None:
     pearsonr = stats.pearsonr(observed["params"].ravel(), output["map_estimate"].ravel())
     assert pearsonr.statistic > 0.5
     assert pearsonr.pvalue < 1e-3
+
+    # Check sample shape.
+    assert output["samples"].shape == (n, 13)
