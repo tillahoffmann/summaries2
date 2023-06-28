@@ -1,5 +1,7 @@
 import numpy as np
 import pytest
+import subprocess
+from textwrap import dedent
 
 
 def sample_params(n: int, p: int) -> np.ndarray:
@@ -35,3 +37,26 @@ def latent_params(n_params: int) -> np.ndarray:
 @pytest.fixture
 def observed_data(latent_params: np.ndarray) -> np.ndarray:
     return sample_data(latent_params)
+
+
+class shared:
+    """
+    Shared code to be used in tests (cf. https://stackoverflow.com/a/76082875/1150961).
+    """
+    def check_pickle_loadable(path: str) -> None:
+        """
+        Try to load a pickled file in a separate process to verify its un-pickle-ability.
+        """
+        code = f"""
+        import pickle
+        with open("{path}", "rb") as fp:
+            pickle.load(fp)
+        """
+        process = subprocess.Popen(["python", "-"], stdin=subprocess.PIPE, text=True,
+                                   stderr=subprocess.PIPE)
+        process.communicate(dedent(code))
+        if process.returncode:
+            raise RuntimeError(f"'{path}' cannot be unpickled: \n{process.stderr}")
+
+
+pytest.shared = shared

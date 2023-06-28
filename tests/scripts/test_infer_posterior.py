@@ -48,29 +48,31 @@ class DummyMinimumConditionalEntropyConfig(DummyConfig):
 def test_infer(simulated_data: np.ndarray, simulated_params: np.ndarray, observed_data: np.ndarray,
                tmp_path: Path, config: Type[DummyConfig]) -> None:
     # Create paths and write the data to disk.
-    simulated = tmp_path / "simulated.pkl"
-    observed = tmp_path / "observed.pkl"
-    output = tmp_path / "output.pkl"
+    simulated_path = tmp_path / "simulated.pkl"
+    observed_path = tmp_path / "observed.pkl"
+    output_path = tmp_path / "output.pkl"
 
-    with simulated.open("wb") as fp:
+    with simulated_path.open("wb") as fp:
         pickle.dump({
             "data": simulated_data,
             "params": simulated_params,
         }, fp)
 
-    with observed.open("wb") as fp:
+    with observed_path.open("wb") as fp:
         pickle.dump({
             "data": observed_data[:7],
         }, fp)
 
     with mock.patch.dict(INFERENCE_CONFIGS, test=config):
-        __main__(map(str, ["test", simulated, observed, output]))
+        __main__(map(str, ["test", simulated_path, observed_path, output_path]))
 
-    with output.open("rb") as fp:
-        result = pickle.load(fp)
+    with output_path.open("rb") as fp:
+        output = pickle.load(fp)
 
     # Verify the shape of the sample.
-    assert result["samples"].shape == (7, 1000, simulated_params.shape[-1])
+    assert output["samples"].shape == (7, 1000, simulated_params.shape[-1])
+
+    pytest.shared.check_pickle_loadable(output_path)
 
 
 @pytest.mark.parametrize("config", [x for x in INFERENCE_CONFIGS if x.startswith("Coalescent")])
@@ -80,8 +82,8 @@ def test_coalescent_infer(config: str, tmp_path: Path) -> None:
     __main__preprocess_coalescent(map(str, [coaloracle, tmp_path, "simulated:98", "observed:2"]))
 
     # Prepare the arguments.
-    output = tmp_path / "output.pkl"
-    argv = [config, tmp_path / "simulated.pkl", tmp_path / "observed.pkl", output]
+    output_path = tmp_path / "output.pkl"
+    argv = [config, tmp_path / "simulated.pkl", tmp_path / "observed.pkl", output_path]
 
     # Dump a simple transformer if required.
     if config == "CoalescentNeuralConfig":
@@ -96,10 +98,12 @@ def test_coalescent_infer(config: str, tmp_path: Path) -> None:
     with mock.patch.object(INFERENCE_CONFIGS[config], "FRAC", 0.1):
         __main__(map(str, argv))
 
-    with output.open("rb") as fp:
-        result = pickle.load(fp)
+    with output_path.open("rb") as fp:
+        output = pickle.load(fp)
 
-    assert result["samples"].shape == (2, 9, 2)
+    assert output["samples"].shape == (2, 9, 2)
+
+    pytest.shared.check_pickle_loadable(output_path)
 
 
 @pytest.mark.parametrize("config", [x for x in INFERENCE_CONFIGS if x.startswith("Tree")])
@@ -122,3 +126,5 @@ def test_tree_infer(config: str, tmp_path: Path) -> None:
         output = pickle.load(fp)
 
     assert output["samples"].shape == (5, 3, 1)
+
+    pytest.shared.check_pickle_loadable(output_path)
