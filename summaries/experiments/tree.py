@@ -148,3 +148,18 @@ class TreeKernelPosterior(BaseEstimator):
         # Only retain as many samples as requested and add an extra parameter dimension for
         # consistency with multi-dimensional parameters.
         return np.asarray(samples)[:self.n_samples, None]
+
+
+def evaluate_gini(x: np.ndarray) -> float:
+    """
+    Evaluate the Gini coefficient based on the last expression of
+    https://en.wikipedia.org/wiki/Gini_coefficient#Alternative_expressions.
+
+    Args:
+        x: Sample from the population.
+
+    Returns:
+        Gini coefficient.
+    """
+    n = x.size
+    return 1 - 2 / (n - 1) * (n - (1 + np.arange(n)) @ x / x.sum())

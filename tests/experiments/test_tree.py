@@ -3,7 +3,7 @@ import numpy as np
 import pytest
 from scipy import stats
 from sklearn.exceptions import NotFittedError
-from summaries.experiments.tree import compress_tree, expand_tree, simulate_tree, \
+from summaries.experiments.tree import compress_tree, evaluate_gini, expand_tree, simulate_tree, \
     TreeKernelPosterior
 
 
@@ -41,3 +41,14 @@ def test_tree_posterior_not_fitted() -> None:
         TreeKernelPosterior(stats.uniform(0, 1))._log_target(0.5)
     with pytest.raises(NotFittedError):
         TreeKernelPosterior(stats.uniform(0, 1)).log_prob(0.5)
+
+
+def test_evaluate_gini() -> None:
+    # Compare the Gini coefficients between a uniform and heavy-tailed distribution. The latter
+    # should have a larger Gini.
+    u = np.random.uniform(0, 1, 1000)
+    h = np.exp(np.random.normal(0, 1, 1000))
+    assert evaluate_gini(u) < evaluate_gini(h)
+
+    # Should be invariant under rescaling.
+    np.testing.assert_allclose(evaluate_gini(h), evaluate_gini(10 * h))

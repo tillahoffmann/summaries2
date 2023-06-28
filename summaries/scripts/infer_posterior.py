@@ -12,6 +12,7 @@ from tqdm import tqdm
 from typing import Any, Dict, List, Optional
 
 from ..algorithm import NearestNeighborAlgorithm
+from ..experiments.tree import evaluate_gini
 from ..transformers import as_transformer, MinimumConditionalEntropyTransformer, Transformer
 from .base import resolve_path
 
@@ -79,7 +80,7 @@ class TreeKernelExpertSummaryConfig(TreeKernelConfig):
         summaries = []
         for predecessors in observed_data:
             in_degrees = np.bincount(predecessors, minlength=observed_data.shape[-1] + 1)
-            summaries.append((in_degrees.std(),))
+            summaries.append((in_degrees.std(), evaluate_gini(in_degrees)))
         return np.asarray(summaries)
 
 
