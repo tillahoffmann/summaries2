@@ -10,5 +10,5 @@ pandas
 pybind11
 pytest
 pytest-cov
-git+https://github.com/tillahoffmann/snippets.git@5f1686c34bf819e124ed19ac06103282822c4960
+git+https://github.com/tillahoffmann/snippets.git@3d0e2059bd634be709739879046fa751c8862bd6
 tqdm
