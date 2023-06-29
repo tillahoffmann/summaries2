@@ -83,6 +83,15 @@ def infer_posterior(splits: Dict[str, Path], config: str, category: str,
     return posterior_target
 
 
+def infer_mdn_posterior(splits: Dict[str, Path], category: str, transformer: Path) -> Path:
+    dependencies = [transformer, splits["test"]]
+    name = f"{category}:infer:{transformer.with_suffix('').name}"
+    target = ROOT / f"{category}/samples/mdn-{transformer.name}"
+    action = ["python", "-m", "summaries.scripts.infer_mdn", transformer, splits["test"], target]
+    create_task(name, dependencies=dependencies, targets=[target], action=action)
+    return target
+
+
 def create_coalescent_tasks() -> Dict[str, Path]:
     splits = prepare_coalescent_data()
 
@@ -94,6 +103,11 @@ def create_coalescent_tasks() -> Dict[str, Path]:
     sample_targets |= {
         config: infer_posterior(splits, config, "coalescent") for config in INFERENCE_CONFIGS if
         config.startswith("Coalescent") and config != "CoalescentNeuralConfig"
+    }
+    sample_targets |= {
+        "CoalescentMixtureDensityConfig": infer_mdn_posterior(
+            splits, "coalescent", transformers["CoalescentMixtureDensityConfig"]
+        ),
     }
     return sample_targets
 
