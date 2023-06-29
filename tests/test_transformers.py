@@ -52,4 +52,4 @@ def test_transformer(transformer_cls: Type[Transformer], kwargs: Dict, simulated
 
 def test_data_dependent_transformer_invalid_shape() -> None:
     with pytest.raises(ValueError, match="must be a vector"):
-        MinimumConditionalEntropyTransformer(np.zeros((3, 2)), 0.1)
+        MinimumConditionalEntropyTransformer(np.zeros((3, 2)), frac=0.1)
