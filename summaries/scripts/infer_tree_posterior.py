@@ -47,7 +47,8 @@ def __main__(argv: List[str] | None = None) -> None:
             # `fit` method of `TreeKernelPosterior` may differ numerically from the `trapz`
             # integration used by `sample_empirical_pdf`.
             samples = sample_empirical_pdf(lin, np.exp(log_prob), args.n_samples, tol=0.1)
-            result.setdefault("samples", []).append(samples)
+            # Store and add trailing dimension for consistency with multivariate problems.
+            result.setdefault("samples", []).append(samples[..., None])
 
         result.setdefault("map_estimate", []).append(posterior.map_estimate_)
         result.setdefault("log_prob_actual", []).append(posterior.log_prob(gamma))
