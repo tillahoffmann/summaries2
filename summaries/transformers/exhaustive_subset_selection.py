@@ -69,7 +69,7 @@ class MinimumConditionalEntropyTransformer(_DataDependentTransformerMixin,
     def _evaluate_mask(self, data, params: np.ndarray, mask: np.ndarray) -> float:
         # Building the tree is relatively expensive compared with querying because we only query
         # once. The keyword arguments try to reduce the tree build time.
-        sampler = NearestNeighborAlgorithm(self.frac, balanced_tree=False, compact_nodes=False)
+        sampler = NearestNeighborAlgorithm(frac=self.frac, balanced_tree=False, compact_nodes=False)
         sampler.fit(data[::self.thin, mask], params[::self.thin])
         # Add a batch dimension to the observed data, draw samples, and remove the batch dimension.
         samples, = sampler.predict([self.observed_data[mask]])

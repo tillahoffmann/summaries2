@@ -98,7 +98,7 @@ def _build_pipeline(config: InferenceConfig, observed_data: Any | None = None) -
     return Pipeline([
         ("transform", transformer),
         ("standardize", StandardScaler()),
-        ("sample", NearestNeighborAlgorithm(config.FRAC)),
+        ("sample", NearestNeighborAlgorithm(frac=config.FRAC)),
     ])
 
 

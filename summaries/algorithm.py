@@ -12,13 +12,19 @@ class NearestNeighborAlgorithm(BaseEstimator):
     Draw approximate posterior samples using a nearest neighbor algorithm.
 
     Args:
-        frac: Fraction of samples to return as approximate posterior samples.
+        frac: Fraction of samples to return as approximate posterior samples (mutually exclusive
+            with `n_samples).
+        n_samples: Number of samples to draw (mutually exclusive with `frac`).
         minkowski_norm: Minkowski p-norm to use for queries (defaults to Euclidean distances).
         **kdtree_kwargs: Keyword arguments passed to the KDTree constructor.
     """
-    def __init__(self, frac: float, minkowski_norm: float = 2, **kdtree_kwargs) -> None:
+    def __init__(self, *, frac: float | None = None, n_samples: int | None = None,
+                 minkowski_norm: float = 2, **kdtree_kwargs) -> None:
         super().__init__()
+        if (frac is None) == (n_samples is None):
+            raise ValueError("Exactly one of `frac` and `n_samples` must be given.")
         self.frac = frac
+        self.n_samples = n_samples
         self.minkowski_norm = minkowski_norm
         self.kdtree_kwargs = kdtree_kwargs
 
@@ -55,7 +61,7 @@ class NearestNeighborAlgorithm(BaseEstimator):
             raise NotFittedError
 
         data = check_array(data)
-        n_samples = int(self.frac * self.tree_.n)
+        n_samples = self.n_samples or int(self.frac * self.tree_.n)
         _, idx = self.tree_.query(data, k=n_samples, p=self.minkowski_norm, **kwargs)
         # Explicitly reshape because `query` drops on dimension if the number of samples is one.
         idx = idx.reshape((*data.shape[:-1], n_samples))
