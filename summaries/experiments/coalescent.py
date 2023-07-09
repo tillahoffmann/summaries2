@@ -11,6 +11,7 @@ class _CoalescentTransformer(NeuralTransformer):
     """
     def __init__(self) -> None:
         transformer = nn.Sequential(
+            # TODO: are 8 units enough here?
             nn.LazyLinear(16),
             nn.Tanh(),
             nn.LazyLinear(16),
