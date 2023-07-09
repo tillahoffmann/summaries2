@@ -5,7 +5,16 @@ import numpy as np
 from scipy import integrate, optimize, special, stats
 from sklearn.base import BaseEstimator
 from sklearn.exceptions import NotFittedError
+import torch
+from torch import nn, Tensor
+from torch.distributions import AffineTransform, Beta, Categorical, Independent, \
+    MixtureSameFamily, TransformedDistribution
+from torch_geometric.data import Data
+from torch_geometric.nn import GINConv, Sequential
 from typing import Any, Tuple
+
+from ..nn import MeanPool
+from ..transformers import NeuralTransformer
 
 
 def simulate_tree(n_nodes: int, gamma: float, seed: Any | None = None) -> Tuple[nx.DiGraph, float]:
@@ -164,3 +173,57 @@ def evaluate_gini(x: np.ndarray) -> float:
     n = x.size
     x = np.sort(x)
     return 1 - 2 / (n - 1) * (n - (1 + np.arange(n)) @ x / x.sum())
+
+
+class _TreeTransformer(NeuralTransformer):
+    """
+    Learnable transformer for the tree kernel inference problem without the "head" of the network.
+    """
+    def __init__(self, depth: int = 2) -> None:
+        layers = []
+        for _ in range(depth):
+            layers.append((GINConv(nn.Sequential(
+                nn.LazyLinear(8),
+                nn.Tanh(),
+                nn.LazyLinear(8),
+                nn.Tanh(),
+            )), 'x, edge_index -> x'))
+        layers.extend([nn.LazyLinear(1), nn.Tanh(), MeanPool()])
+        transformer = Sequential('x, edge_index', layers)
+        super().__init__(transformer)
+
+
+class TreePosteriorMixtureDensityTransformer(_TreeTransformer):
+    """
+    Learnable transformer with conditional posterior density estimation "head" based on mixture
+    density networks.
+    """
+    def __init__(self, n_components: int = 10) -> None:
+        super().__init__()
+        self.n_components = n_components
+        self.mixture_parameters = nn.ModuleDict({
+            key: nn.Sequential(
+                nn.LazyLinear(8),
+                nn.Tanh(),
+                nn.LazyLinear(size * n_components),
+            ) for (size, key) in [(1, "logits"), (1, "concentration1s"), (1, "concentration0s")]
+        })
+
+    def forward(self, data: Data) -> Tensor:
+        transformed = self.transformer(torch.ones([data.num_nodes, 1]), edge_index=data.edge_index)
+
+        logits: Tensor = self.mixture_parameters["logits"](transformed)
+        mixture_dist = Categorical(logits=logits)
+
+        concentration1s: Tensor = self.mixture_parameters["concentration1s"](transformed)
+        concentration1s = concentration1s.reshape((-1, self.n_components, 1)).exp()
+        concentration0s: Tensor = self.mixture_parameters["concentration0s"](transformed)
+        concentration0s = concentration0s.reshape((-1, self.n_components, 1)).exp()
+        component_dist = Beta(concentration1s, concentration0s)
+
+        # Rescale the distribution to the domain used by the simulations and reinterpret the last
+        # batch dimension as an event dimension.
+        component_dist = TransformedDistribution(component_dist, AffineTransform(0, 2))
+        component_dist = Independent(component_dist, 1)
+
+        return MixtureSameFamily(mixture_dist, component_dist)

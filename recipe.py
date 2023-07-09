@@ -42,24 +42,25 @@ def prepare_coalescent_data() -> Dict[str, Path]:
     return split_targets
 
 
+def train_transformer(category: str, config: str, splits: Dict[str, Path]) -> Dict[str, Path]:
+    """
+    Train a single transformer.
+    """
+    dependencies = [splits["train"], splits["validation"]]
+    transformer_target = ROOT / f"{category}/transformers/{config}.pkl"
+    action = ["python", "-m", "summaries.scripts.train_transformer", config, *dependencies,
+              transformer_target]
+    create_task(f"{category}:train:{config}", dependencies=dependencies, action=action,
+                targets=[transformer_target])
+    return transformer_target
+
+
 def train_coalescent_transformers(splits: Dict[str, Path]) -> Dict[str, Path]:
     """
     Train transformers for the coalescent dataset.
     """
-    dependencies = [splits["train"], splits["validation"]]
-    targets = {}
-    for config in TRAIN_CONFIGS:
-        if not config.startswith("Coalescent"):
-            continue
-
-        transformer_target = COALESCENT_ROOT / f"transformers/{config}.pkl"
-        action = ["python", "-m", "summaries.scripts.train_transformer", config, *dependencies,
-                  transformer_target]
-        create_task(f"coalescent:train:{config}", dependencies=dependencies, action=action,
-                    targets=[transformer_target])
-
-        targets[config] = transformer_target
-    return targets
+    return {config: train_transformer("coalescent", config, splits) for config in TRAIN_CONFIGS
+            if config.startswith("Coalescent")}
 
 
 def infer_posterior(splits: Dict[str, Path], config: str, category: str,
@@ -138,10 +139,26 @@ def infer_tree_posterior_with_history_sampler(splits: Dict[str, Path]) -> Path:
     return posterior_target
 
 
+def train_tree_transformers(splits: Dict[str, Path]) -> Dict[str, Path]:
+    """
+    Train transformers for the tree dataset.
+    """
+    targets = {}
+    for config in TRAIN_CONFIGS:
+        if not config.startswith("Tree"):
+            continue
+        targets[config] = train_transformer("tree", config, splits)
+    return targets
+
+
 def create_tree_tasks() -> None:
     splits = simulate_tree_data()
+    transformers = train_tree_transformers(splits)
     samples = {
         "TreeKernelHistorySamplerConfig": infer_tree_posterior_with_history_sampler(splits),
+        "TreeMixtureDensityConfig": infer_mdn_posterior(
+            splits, "tree", transformers["TreeMixtureDensityConfig"]
+        ),
     }
     samples |= {
         config: infer_posterior(splits, config, "tree") for config in INFERENCE_CONFIGS if

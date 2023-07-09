@@ -2,7 +2,9 @@ import numpy as np
 from pathlib import Path
 import pickle
 import pytest
+from summaries.scripts.configs import TreeSimulationConfig
 from summaries.scripts.preprocess_coalescent import __main__ as __main__preprocess_coalescent
+from summaries.scripts.simulate_data import __main__ as __main__simulate_data
 from summaries.scripts.train_transformer import __main__, TrainConfig, TRAIN_CONFIGS
 from torch import as_tensor, nn, Tensor
 from unittest import mock
@@ -21,6 +23,27 @@ def test_train_transformer_coalescent(config: str, tmp_path: Path) -> None:
         __main__(map(str, argv))
 
     with output.open("rb") as fp:
+        result = pickle.load(fp)
+
+    assert isinstance(result["transformer"], nn.Module)
+
+
+@pytest.mark.parametrize("config", [x for x in TRAIN_CONFIGS if x.startswith("Tree")])
+def test_train_transformer_tree(config: str, tmp_path: Path) -> None:
+    # Generate two datasets.
+    train_path = tmp_path / "train.pkl"
+    validation_path = tmp_path / "validation.pkl"
+    for path in [train_path, validation_path]:
+        with mock.patch.object(TreeSimulationConfig, "N_NODES", 13):
+            __main__simulate_data(["TreeSimulationConfig", "--n-samples=10", str(path)])
+
+    output_path = tmp_path / "output.pkl"
+    argv = [config, tmp_path / "train.pkl", tmp_path / "validation.pkl", output_path]
+
+    with mock.patch.object(TRAIN_CONFIGS[config], "MAX_EPOCHS", 2):
+        __main__(map(str, argv))
+
+    with output_path.open("rb") as fp:
         result = pickle.load(fp)
 
     assert isinstance(result["transformer"], nn.Module)
