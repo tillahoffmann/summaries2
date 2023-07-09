@@ -21,3 +21,15 @@ class NegLogProbLoss(nn.Module):
             return loss
         else:
             raise NotImplementedError(f"{self.reduction} is not a valid reduction")
+
+
+class MeanPool(nn.Module):
+    """
+    Mean-pool features.
+    """
+    def __init__(self, axis: int = -2) -> None:
+        super().__init__()
+        self.axis = axis
+
+    def forward(self, x: Tensor) -> Tensor:
+        return x.mean(axis=self.axis)
