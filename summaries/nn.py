@@ -1,6 +1,7 @@
+import inspect
 from torch import nn, Tensor
 from torch.distributions import Distribution
-from typing import Literal
+from typing import Any, Literal
 
 
 class NegLogProbLoss(nn.Module):
@@ -33,3 +34,19 @@ class MeanPool(nn.Module):
 
     def forward(self, x: Tensor) -> Tensor:
         return x.mean(axis=self.axis)
+
+
+class SequentialWithKeywords(nn.Module):
+    """
+    Apply modules sequentially with optional keyword arguments.
+    """
+    def __init__(self, *layers: nn.Module) -> None:
+        super().__init__()
+        self.layers = nn.ModuleList(layers)
+
+    def forward(self, x: Any, **kwargs: Any) -> Any:
+        for layer in self.layers:
+            signature = inspect.Signature.from_callable(layer.forward)
+            keys = set(kwargs) & set(signature.parameters)
+            x = layer(x, **{key: kwargs[key] for key in keys})
+        return x

@@ -10,10 +10,10 @@ from torch import nn, Tensor
 from torch.distributions import AffineTransform, Beta, Categorical, Independent, \
     MixtureSameFamily, TransformedDistribution
 from torch_geometric.data import Data
-from torch_geometric.nn import GINConv, Sequential
+from torch_geometric.nn import GINConv
 from typing import Any, Tuple
 
-from ..nn import MeanPool
+from ..nn import MeanPool, SequentialWithKeywords
 from ..transformers import NeuralTransformer
 
 
@@ -182,14 +182,14 @@ class _TreeTransformer(NeuralTransformer):
     def __init__(self, depth: int = 2) -> None:
         layers = []
         for _ in range(depth):
-            layers.append((GINConv(nn.Sequential(
+            layers.append(GINConv(nn.Sequential(
                 nn.LazyLinear(8),
                 nn.Tanh(),
                 nn.LazyLinear(8),
                 nn.Tanh(),
-            )), 'x, edge_index -> x'))
+            )))
         layers.extend([nn.LazyLinear(1), nn.Tanh(), MeanPool()])
-        transformer = Sequential('x, edge_index', layers)
+        transformer = SequentialWithKeywords(*layers)
         super().__init__(transformer)
 
 
