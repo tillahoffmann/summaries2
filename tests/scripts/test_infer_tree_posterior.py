@@ -31,6 +31,6 @@ def test_infer_tree_posterior(tmp_path: Path) -> None:
     assert pearsonr.pvalue < 1e-3
 
     # Check sample shape.
-    assert output["samples"].shape == (n, 13)
+    assert output["samples"].shape == (n, 13, 1)
 
     pytest.shared.check_pickle_loadable(output_path)

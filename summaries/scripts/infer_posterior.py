@@ -9,7 +9,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import FunctionTransformer, StandardScaler
 from torch import no_grad
 from tqdm import tqdm
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from ..algorithm import NearestNeighborAlgorithm
 from ..experiments.tree import evaluate_gini
@@ -22,19 +22,19 @@ class Args:
     simulated: Path
     observed: Path
     output: Path
-    transformer_kwargs: Dict[str, Any]
+    transformer_kwargs: Dict[str, Any] | None
+    n_samples: int | None
 
 
 class InferenceConfig:
     """
     Base class for inference configurations.
     """
-    FRAC: float | None = None
+    N_SAMPLES: float | None = None
     IS_DATA_DEPENDENT: bool = False
 
     def __init__(self, args: Args) -> None:
         self.args = args
-        assert self.FRAC is not None and 0 < self.FRAC and self.FRAC < 1
 
     def create_transformer(self, observed_data: Any | None = None) -> Transformer:
         raise NotImplementedError
@@ -42,16 +42,21 @@ class InferenceConfig:
     def create_preprocessor(self) -> Transformer | None:
         return None
 
+    @property
+    def n_samples(self):
+        return self.args.n_samples or self.N_SAMPLES
+
 
 class CoalescentConfig(InferenceConfig):
-    FRAC = 0.01
+    N_SAMPLES = 1_000
 
 
 class CoalescentMinimumConditionalEntropyConfig(CoalescentConfig):
     IS_DATA_DEPENDENT = True
 
     def create_transformer(self, observed_data: np.ndarray) -> Transformer:
-        return MinimumConditionalEntropyTransformer(observed_data, self.FRAC, thin=10)
+        return MinimumConditionalEntropyTransformer(observed_data, n_samples=self.n_samples,
+                                                    thin=10)
 
 
 class CoalescentLinearPosteriorMeanConfig(CoalescentConfig):
@@ -66,7 +71,7 @@ class CoalescentNeuralConfig(CoalescentConfig):
 
 
 class TreeKernelConfig(InferenceConfig):
-    FRAC = 0.01
+    N_SAMPLES = 1000
 
 
 class TreeKernelExpertSummaryConfig(TreeKernelConfig):
@@ -98,13 +103,14 @@ def _build_pipeline(config: InferenceConfig, observed_data: Any | None = None) -
     return Pipeline([
         ("transform", transformer),
         ("standardize", StandardScaler()),
-        ("sample", NearestNeighborAlgorithm(config.FRAC)),
+        ("sample", NearestNeighborAlgorithm(n_samples=config.n_samples)),
     ])
 
 
-def __main__(argv: Optional[List[str]] = None) -> None:
+def __main__(argv: List[str] | None = None) -> None:
     start = datetime.now()
     parser = ArgumentParser("infer")
+    parser.add_argument("--n-samples", type=int, help="number of posterior samples to draw")
     parser.add_argument("--transformer-kwargs", type=json.loads, default={},
                         help="keyword arguments for the transformer encoded as json")
     parser.add_argument("config", help="inference configuration to run", choices=INFERENCE_CONFIGS)

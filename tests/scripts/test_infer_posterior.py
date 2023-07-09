@@ -26,7 +26,7 @@ class DummyPreprocessor:
 
 
 class DummyConfig(InferenceConfig):
-    FRAC = 0.01
+    N_SAMPLES = 11
 
     def create_preprocessor(self) -> Transformer | None:
         return DummyPreprocessor()
@@ -41,7 +41,7 @@ class DummyMinimumConditionalEntropyConfig(DummyConfig):
     IS_DATA_DEPENDENT = True
 
     def create_transformer(self, observed_data: Any | None = None) -> Transformer:
-        return MinimumConditionalEntropyTransformer(observed_data, self.FRAC)
+        return MinimumConditionalEntropyTransformer(observed_data, n_samples=self.N_SAMPLES)
 
 
 @pytest.mark.parametrize("config", [DummyPredictorConfig, DummyMinimumConditionalEntropyConfig])
@@ -70,7 +70,7 @@ def test_infer(simulated_data: np.ndarray, simulated_params: np.ndarray, observe
         output = pickle.load(fp)
 
     # Verify the shape of the sample.
-    assert output["samples"].shape == (7, 1000, simulated_params.shape[-1])
+    assert output["samples"].shape == (7, 11, simulated_params.shape[-1])
 
     pytest.shared.check_pickle_loadable(output_path)
 
@@ -83,7 +83,8 @@ def test_coalescent_infer(config: str, tmp_path: Path) -> None:
 
     # Prepare the arguments.
     output_path = tmp_path / "output.pkl"
-    argv = [config, tmp_path / "simulated.pkl", tmp_path / "observed.pkl", output_path]
+    argv = ["--n-samples=9", config, tmp_path / "simulated.pkl", tmp_path / "observed.pkl",
+            output_path]
 
     # Dump a simple transformer if required.
     if config == "CoalescentNeuralConfig":
@@ -94,9 +95,7 @@ def test_coalescent_infer(config: str, tmp_path: Path) -> None:
             }, fp)
         argv.extend(["--transformer-kwargs", json.dumps({"transformer": str(transformer)})])
 
-    # We need to increase the fraction of samples to estimate the entropy in this test.
-    with mock.patch.object(INFERENCE_CONFIGS[config], "FRAC", 0.1):
-        __main__(map(str, argv))
+    __main__(map(str, argv))
 
     with output_path.open("rb") as fp:
         output = pickle.load(fp)
@@ -117,10 +116,10 @@ def test_tree_infer(config: str, tmp_path: Path) -> None:
         __main__simulate_data(["--n-samples=5", "TreeSimulationConfig", str(observed_path)])
 
     output_path = tmp_path / "output.pkl"
-    argv = [config, tmp_path / "simulated.pkl", tmp_path / "observed.pkl", output_path]
+    argv = ["--n-samples=3", config, tmp_path / "simulated.pkl", tmp_path / "observed.pkl",
+            output_path]
 
-    with mock.patch.object(INFERENCE_CONFIGS[config], "FRAC", 0.1):
-        __main__(map(str, argv))
+    __main__(map(str, argv))
 
     with output_path.open("rb") as fp:
         output = pickle.load(fp)
