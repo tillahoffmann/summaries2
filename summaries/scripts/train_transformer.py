@@ -11,12 +11,11 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import DataLoader, TensorDataset
 from torch_geometric.data import Data as GeometricData
 from torch_geometric.loader import DataLoader as GeometricDataLoader
-from torch_geometric.utils import to_undirected
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from ..experiments.coalescent import CoalescentPosteriorMixtureDensityTransformer, \
     CoalescentPosteriorMeanTransformer
-from ..experiments.tree import TreePosteriorMixtureDensityTransformer
+from ..experiments.tree import predecessors_to_datasets, TreePosteriorMixtureDensityTransformer
 from ..nn import NegLogProbLoss
 from .base import resolve_path
 
@@ -86,21 +85,7 @@ class TreeTrainConfig(TrainConfig):
         with path.open("rb") as fp:
             result = pickle.load(fp)
         device = kwargs.pop("device", None)
-
-        datasets = []
-        predecessors: np.ndarray
-        for params, predecessors in zip(result["params"], result["data"]):
-            n_edges, = predecessors.shape
-            edge_index = torch.vstack([
-                1 + torch.arange(n_edges, device=device)[None],
-                torch.as_tensor(predecessors[None], dtype=torch.int64, device=device),
-            ])
-            edge_index = to_undirected(edge_index)
-
-            params = torch.as_tensor(params[None], dtype=torch.get_default_dtype())
-
-            datasets.append(GeometricData(edge_index=edge_index, params=params,
-                                          num_nodes=n_edges + 1))
+        datasets = predecessors_to_datasets(result["data"], result["params"], device)
         return GeometricDataLoader(datasets, **self.DATA_LOADER_KWARGS)
 
 

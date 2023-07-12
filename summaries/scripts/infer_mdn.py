@@ -1,13 +1,13 @@
 import argparse
 from pathlib import Path
 import pickle
-import torch
 from torch import as_tensor, get_default_dtype, nn, no_grad
 from torch.distributions import Distribution
 import torch_geometric.data
 import torch_geometric.loader
-from torch_geometric.utils import to_undirected
 from typing import List
+
+from ..experiments.tree import predecessors_to_datasets
 
 
 class Args:
@@ -36,16 +36,7 @@ def __main__(argv: List[str] | None = None) -> None:
     if args.loader == "raw":
         observed = as_tensor(observed, dtype=get_default_dtype())
     elif args.loader == "tree":
-        datasets = []
-        for predecessors in observed:
-            n_edges, = predecessors.shape
-            edge_index = torch.vstack([
-                1 + torch.arange(n_edges)[None],
-                torch.as_tensor(predecessors[None], dtype=torch.int64),
-            ])
-            edge_index = to_undirected(edge_index)
-
-            datasets.append(torch_geometric.data.Data(edge_index=edge_index, num_nodes=n_edges + 1))
+        datasets = predecessors_to_datasets(observed)
         observed, = torch_geometric.loader.DataLoader(datasets, batch_size=len(datasets))
     else:
         raise NotImplementedError(args.loader)

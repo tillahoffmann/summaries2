@@ -7,7 +7,6 @@ import pickle
 from sklearn.linear_model import LinearRegression
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import FunctionTransformer, StandardScaler
-import torch
 from torch import no_grad
 import torch_geometric.data
 import torch_geometric.utils
@@ -15,7 +14,7 @@ from tqdm import tqdm
 from typing import Any, Dict, List
 
 from ..algorithm import NearestNeighborAlgorithm
-from ..experiments.tree import evaluate_gini
+from ..experiments.tree import evaluate_gini, predecessors_to_datasets
 from ..transformers import as_transformer, MinimumConditionalEntropyTransformer, Transformer
 from .base import resolve_path
 
@@ -101,16 +100,7 @@ class TreeKernelNeuralConfig(TreeKernelConfig):
         return FunctionTransformer(self._predecessors_to_batch)
 
     def _predecessors_to_batch(self, data: np.ndarray) -> torch_geometric.data.Data:
-        datasets = []
-        for predecessors in data:
-            n_edges, = predecessors.shape
-            edge_index = torch.vstack([
-                1 + torch.arange(n_edges)[None],
-                torch.as_tensor(predecessors[None], dtype=torch.int64),
-            ])
-            edge_index = torch_geometric.utils.to_undirected(edge_index)
-
-            datasets.append(torch_geometric.data.Data(edge_index=edge_index, num_nodes=n_edges + 1))
+        datasets = predecessors_to_datasets(data)
         data, = torch_geometric.loader.DataLoader(datasets, batch_size=len(datasets))
         return data
 

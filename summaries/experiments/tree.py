@@ -11,7 +11,8 @@ from torch.distributions import AffineTransform, Beta, Categorical, Independent,
     MixtureSameFamily, TransformedDistribution
 from torch_geometric.data import Data
 from torch_geometric.nn import GINConv
-from typing import Any, Tuple
+from torch_geometric.utils import to_undirected
+from typing import Any, List, Tuple
 
 from ..nn import MeanPoolByGraph, SequentialWithKeywords
 from ..transformers import NeuralTransformer
@@ -231,3 +232,25 @@ class TreePosteriorMixtureDensityTransformer(_TreeTransformer):
         component_dist = Independent(component_dist, 1)
 
         return MixtureSameFamily(mixture_dist, component_dist)
+
+
+def predecessors_to_datasets(predecessors: np.ndarray, params: np.ndarray | None = None,
+                             device: torch.device | None = None) -> List[Data]:
+    """
+    Convert a matrix of predecessors to a list of `torch_geometric` datasets.
+    """
+    datasets = []
+    for i, row in enumerate(predecessors):
+        n_edges, = row.shape
+        edge_index = torch.vstack([
+            1 + torch.arange(n_edges, device=device)[None],
+            torch.as_tensor(row[None], dtype=torch.int64, device=device),
+        ])
+        edge_index = to_undirected(edge_index)
+
+        kwargs = {}
+        if params is not None:
+            kwargs["params"] = torch.as_tensor(params[i, None], dtype=torch.get_default_dtype())
+
+        datasets.append(Data(edge_index=edge_index, num_nodes=n_edges + 1, **kwargs))
+    return datasets
