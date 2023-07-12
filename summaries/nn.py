@@ -1,7 +1,10 @@
 import inspect
+import torch
 from torch import nn, Tensor
 from torch.distributions import Distribution
+import torch_scatter
 from typing import Any, Literal
+import warnings
 
 
 class NegLogProbLoss(nn.Module):
@@ -14,6 +17,10 @@ class NegLogProbLoss(nn.Module):
 
     def forward(self, distribution: Distribution, params: Tensor) -> Tensor:
         loss = - distribution.log_prob(params)
+        expected_shape = distribution.batch_shape + distribution.event_shape
+        if params.shape != expected_shape:
+            warnings.warn(f"Possible mismatch between parameter shape {params.shape} and "
+                          f"distribution shape {expected_shape}. Did you broadcast intentionally?")
         if self.reduction == "mean":
             return loss.mean()
         elif self.reduction == "sum":
@@ -50,3 +57,11 @@ class SequentialWithKeywords(nn.Module):
             keys = set(kwargs) & set(signature.parameters)
             x = layer(x, **{key: kwargs[key] for key in keys})
         return x
+
+
+class MeanPoolByGraph(nn.Module):
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+
+    def forward(self, x: torch.Tensor, batch: torch.LongTensor) -> torch.Tensor:
+        return torch_scatter.scatter(x, batch, dim=0, reduce='mean')

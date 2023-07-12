@@ -43,7 +43,7 @@ class shared:
     """
     Shared code to be used in tests (cf. https://stackoverflow.com/a/76082875/1150961).
     """
-    def check_pickle_loadable(path: str) -> None:
+    def assert_pickle_loadable(path: str) -> None:
         """
         Try to load a pickled file in a separate process to verify its un-pickle-ability.
         """

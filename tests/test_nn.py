@@ -11,7 +11,8 @@ def test_neg_log_prob_loss(reduction: str) -> None:
     loss = NegLogProbLoss(reduction)
     dist = Wishart(999, eye(3))
     x = dist.sample([13])
-    value = loss(dist, x)
+    with pytest.warns(match="Did you broadcast intentionally?"):
+        value = loss(dist, x)
     assert value.shape == ((13,) if reduction == "none" else ())
 
 

@@ -33,4 +33,4 @@ def test_infer_tree_posterior(tmp_path: Path) -> None:
     # Check sample shape.
     assert output["samples"].shape == (n, 13, 1)
 
-    pytest.shared.check_pickle_loadable(output_path)
+    pytest.shared.assert_pickle_loadable(output_path)

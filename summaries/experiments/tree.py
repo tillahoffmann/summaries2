@@ -13,7 +13,7 @@ from torch_geometric.data import Data
 from torch_geometric.nn import GINConv
 from typing import Any, Tuple
 
-from ..nn import MeanPool, SequentialWithKeywords
+from ..nn import MeanPoolByGraph, SequentialWithKeywords
 from ..transformers import NeuralTransformer
 
 
@@ -188,7 +188,7 @@ class _TreeTransformer(NeuralTransformer):
                 nn.LazyLinear(8),
                 nn.Tanh(),
             )))
-        layers.extend([nn.LazyLinear(1), nn.Tanh(), MeanPool()])
+        layers.extend([nn.LazyLinear(1), nn.Tanh(), MeanPoolByGraph()])
         transformer = SequentialWithKeywords(*layers)
         super().__init__(transformer)
 
@@ -209,8 +209,12 @@ class TreePosteriorMixtureDensityTransformer(_TreeTransformer):
             ) for (size, key) in [(1, "logits"), (1, "concentration1s"), (1, "concentration0s")]
         })
 
+    def transform(self, data: Data) -> torch.Tensor:
+        features = torch.ones([data.num_nodes, 1])
+        return self.transformer(features, edge_index=data.edge_index, batch=data.batch)
+
     def forward(self, data: Data) -> Tensor:
-        transformed = self.transformer(torch.ones([data.num_nodes, 1]), edge_index=data.edge_index)
+        transformed = self.transform(data)
 
         logits: Tensor = self.mixture_parameters["logits"](transformed)
         mixture_dist = Categorical(logits=logits)

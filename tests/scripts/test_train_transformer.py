@@ -43,7 +43,7 @@ def test_train_transformer_tree(config: str, tmp_path: Path) -> None:
     with mock.patch.object(TRAIN_CONFIGS[config], "MAX_EPOCHS", 2):
         __main__(map(str, argv))
 
-    pytest.shared.check_pickle_loadable(output_path)
+    pytest.shared.assert_pickle_loadable(output_path)
     with output_path.open("rb") as fp:
         result = pickle.load(fp)
 

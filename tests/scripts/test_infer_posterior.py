@@ -5,6 +5,7 @@ from pathlib import Path
 import pickle
 import pytest
 from sklearn.linear_model import LinearRegression
+from summaries.experiments.tree import TreePosteriorMixtureDensityTransformer
 from summaries.scripts.infer_posterior import __main__, INFERENCE_CONFIGS, InferenceConfig
 from summaries.scripts.preprocess_coalescent import __main__ as __main__preprocess_coalescent
 from summaries.scripts.simulate_data import __main__ as __main__simulate_data
@@ -72,7 +73,7 @@ def test_infer(simulated_data: np.ndarray, simulated_params: np.ndarray, observe
     # Verify the shape of the sample.
     assert output["samples"].shape == (7, 11, simulated_params.shape[-1])
 
-    pytest.shared.check_pickle_loadable(output_path)
+    pytest.shared.assert_pickle_loadable(output_path)
 
 
 @pytest.mark.parametrize("config", [x for x in INFERENCE_CONFIGS if x.startswith("Coalescent")])
@@ -102,7 +103,7 @@ def test_coalescent_infer(config: str, tmp_path: Path) -> None:
 
     assert output["samples"].shape == (2, 9, 2)
 
-    pytest.shared.check_pickle_loadable(output_path)
+    pytest.shared.assert_pickle_loadable(output_path)
 
 
 @pytest.mark.parametrize("config", [x for x in INFERENCE_CONFIGS if x.startswith("Tree")])
@@ -119,6 +120,15 @@ def test_tree_infer(config: str, tmp_path: Path) -> None:
     argv = ["--n-samples=3", config, tmp_path / "simulated.pkl", tmp_path / "observed.pkl",
             output_path]
 
+    # Dump a simple transformer if required.
+    if config == "TreeKernelNeuralConfig":
+        transformer = tmp_path / "transformer.pkl"
+        with transformer.open("wb") as fp:
+            pickle.dump({
+                "transformer": TreePosteriorMixtureDensityTransformer(2),
+            }, fp)
+        argv.extend(["--transformer-kwargs", json.dumps({"transformer": str(transformer)})])
+
     __main__(map(str, argv))
 
     with output_path.open("rb") as fp:
@@ -126,4 +136,4 @@ def test_tree_infer(config: str, tmp_path: Path) -> None:
 
     assert output["samples"].shape == (5, 3, 1)
 
-    pytest.shared.check_pickle_loadable(output_path)
+    pytest.shared.assert_pickle_loadable(output_path)
