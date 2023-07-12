@@ -18,8 +18,9 @@ jobs:
           cache: pip
       - name: Pre-install pybind11, fasttr, and torch.
         run: |
-          pip install `grep pybind11== requirements.txt` `grep wheel== requirements.txt` `grep torch== requirements.txt`
+          pip install `grep pybind11== requirements.txt` `grep wheel== requirements.txt`
           pip install --no-build-isolation `grep -oE 'git\+.*?fasttr.git@\w+' requirements.txt`
+          pip install --extra-index-url https://download.pytorch.org/whl/cpu --no-compile --no-deps `grep torch== requirements.txt`
       - name: Install Python dependencies.
         run: pip install --extra-index-url https://download.pytorch.org/whl/cpu --no-compile --no-deps -r requirements.txt
       - name: Lint the code.
