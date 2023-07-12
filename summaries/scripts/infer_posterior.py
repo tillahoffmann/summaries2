@@ -8,11 +8,13 @@ from sklearn.linear_model import LinearRegression
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import FunctionTransformer, StandardScaler
 from torch import no_grad
+import torch_geometric.data
+import torch_geometric.utils
 from tqdm import tqdm
 from typing import Any, Dict, List
 
 from ..algorithm import NearestNeighborAlgorithm
-from ..experiments.tree import evaluate_gini
+from ..experiments.tree import evaluate_gini, predecessors_to_datasets
 from ..transformers import as_transformer, MinimumConditionalEntropyTransformer, Transformer
 from .base import resolve_path
 
@@ -89,11 +91,26 @@ class TreeKernelExpertSummaryConfig(TreeKernelConfig):
         return np.asarray(summaries)
 
 
+class TreeKernelNeuralConfig(TreeKernelConfig):
+    def create_transformer(self, observed_data: Any | None = None) -> Transformer:
+        with open(self.args.transformer_kwargs["transformer"], "rb") as fp:
+            return pickle.load(fp)["transformer"]
+
+    def create_preprocessor(self) -> Transformer | None:
+        return FunctionTransformer(self._predecessors_to_batch)
+
+    def _predecessors_to_batch(self, data: np.ndarray) -> torch_geometric.data.Data:
+        datasets = predecessors_to_datasets(data)
+        data, = torch_geometric.loader.DataLoader(datasets, batch_size=len(datasets))
+        return data
+
+
 INFERENCE_CONFIGS = [
     CoalescentLinearPosteriorMeanConfig,
     CoalescentMinimumConditionalEntropyConfig,
     CoalescentNeuralConfig,
     TreeKernelExpertSummaryConfig,
+    TreeKernelNeuralConfig,
 ]
 INFERENCE_CONFIGS = {config.__name__: config for config in INFERENCE_CONFIGS}
 

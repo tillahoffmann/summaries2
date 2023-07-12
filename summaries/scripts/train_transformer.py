@@ -5,13 +5,17 @@ import numpy as np
 from pathlib import Path
 import pickle
 from torch import as_tensor, get_default_dtype, nn, no_grad, Tensor
+import torch
 from torch.optim import Adam
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import DataLoader, TensorDataset
-from typing import Any, Callable, Dict, List, Optional
+from torch_geometric.data import Data as GeometricData
+from torch_geometric.loader import DataLoader as GeometricDataLoader
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from ..experiments.coalescent import CoalescentPosteriorMixtureDensityTransformer, \
     CoalescentPosteriorMeanTransformer
+from ..experiments.tree import predecessors_to_datasets, TreePosteriorMixtureDensityTransformer
 from ..nn import NegLogProbLoss
 from .base import resolve_path
 
@@ -71,11 +75,45 @@ class CoalescentMixtureDensityConfig(CoalescentTrainConfig):
         return CoalescentPosteriorMixtureDensityTransformer()
 
 
+class TreeTrainConfig(TrainConfig):
+    DATA_LOADER_KWARGS = {
+        "batch_size": 32,
+        "shuffle": True,
+    }
+
+    def create_data_loader(self, path: Path, **kwargs: Any) -> DataLoader:
+        with path.open("rb") as fp:
+            result = pickle.load(fp)
+        device = kwargs.pop("device", None)
+        datasets = predecessors_to_datasets(result["data"], result["params"], device)
+        return GeometricDataLoader(datasets, **self.DATA_LOADER_KWARGS)
+
+
+class TreeMixtureDensityConfig(TreeTrainConfig):
+    LOSS = NegLogProbLoss()
+
+    def create_transformer(self):
+        return TreePosteriorMixtureDensityTransformer()
+
+
 TRAIN_CONFIGS = [
     CoalescentMixtureDensityConfig,
     CoalescentPosteriorMeanConfig,
+    TreeMixtureDensityConfig,
 ]
 TRAIN_CONFIGS = {config.__name__: config for config in TRAIN_CONFIGS}
+
+
+def _expand_batch(batch: Tuple[torch.Tensor, torch.Tensor] | GeometricData) \
+        -> Tuple[torch.Tensor, torch.Tensor, int] | Tuple[GeometricData, int]:
+    if isinstance(batch, GeometricData):
+        data = batch
+        params = batch.params
+        n = batch.num_graphs
+    else:
+        data, params = batch
+        n = data.shape[0]
+    return data, params, n
 
 
 def __main__(argv: Optional[List[str]] = None) -> None:
@@ -96,8 +134,8 @@ def __main__(argv: Optional[List[str]] = None) -> None:
 
     # Run one pilot batch to initialize the lazy modules.
     transformer = config.create_transformer().to(args.device)
-    data: Tensor
-    for data, _ in train_loader:
+    for batch in train_loader:
+        data, *_ = _expand_batch(batch)
         transformer(data)
         break
 
@@ -114,13 +152,14 @@ def __main__(argv: Optional[List[str]] = None) -> None:
         sizes = []
         loss_values = []
         params: Tensor
-        for data, params in train_loader:
+        for batch in train_loader:
+            data, params, n = _expand_batch(batch)
             optim.zero_grad()
             output = transformer(data)
             loss_value = config.LOSS(output, params)
             loss_value.backward()
             optim.step()
-            sizes.append(data.shape[0])
+            sizes.append(n)
             loss_values.append(loss_value.item())
 
         train_loss = np.dot(sizes, loss_values) / np.sum(sizes)
@@ -129,10 +168,11 @@ def __main__(argv: Optional[List[str]] = None) -> None:
         sizes = []
         loss_values = []
         with no_grad():
-            for data, params in validation_loader:
+            for batch in validation_loader:
+                data, params, n = _expand_batch(batch)
                 output = transformer(data)
                 loss_value = config.LOSS(output, params)
-                sizes.append(data.shape[0])
+                sizes.append(n)
                 loss_values.append(loss_value)
 
         validation_loss = np.dot(sizes, loss_values) / np.sum(sizes)

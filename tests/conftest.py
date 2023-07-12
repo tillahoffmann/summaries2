@@ -43,7 +43,7 @@ class shared:
     """
     Shared code to be used in tests (cf. https://stackoverflow.com/a/76082875/1150961).
     """
-    def check_pickle_loadable(path: str) -> None:
+    def assert_pickle_loadable(path: str) -> None:
         """
         Try to load a pickled file in a separate process to verify its un-pickle-ability.
         """
@@ -54,9 +54,9 @@ class shared:
         """
         process = subprocess.Popen(["python", "-"], stdin=subprocess.PIPE, text=True,
                                    stderr=subprocess.PIPE)
-        process.communicate(dedent(code))
+        _, stderr = process.communicate(dedent(code))
         if process.returncode:
-            raise RuntimeError(f"'{path}' cannot be unpickled: \n{process.stderr}")
+            raise RuntimeError(f"'{path}' cannot be unpickled: \n{stderr}")
 
 
 pytest.shared = shared

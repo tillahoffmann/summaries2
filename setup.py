@@ -12,5 +12,6 @@ setup(
         "scipy",
         "torch",
         "torch-geometric",
+        "torch-scatter",
     ],
 )
