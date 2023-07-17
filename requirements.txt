@@ -197,6 +197,7 @@ numpy==1.25.0
     #   pandas
     #   scikit-learn
     #   scipy
+    #   shapely
     #   summaries
     #   torch-geometric
 overrides==7.3.1
@@ -312,6 +313,8 @@ scipy==1.10.1
     #   torch-geometric
 send2trash==1.8.2
     # via jupyter-server
+shapely==2.0.1
+    # via -r requirements.in
 six==1.16.0
     # via
     #   asttokens

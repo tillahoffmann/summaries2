@@ -11,4 +11,5 @@ pybind11
 pytest
 pytest-cov
 git+https://github.com/tillahoffmann/snippets.git@3d0e2059bd634be709739879046fa751c8862bd6
+shapely
 tqdm
