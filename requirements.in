@@ -1,4 +1,5 @@
 -e file:.
+cmdstanpy
 cook-build>0.2.1
 git+https://github.com/gstonge/fasttr.git@787d0d273ecc21843889a5b4ce3c763110595f28
 flake8

@@ -42,6 +42,8 @@ charset-normalizer==3.1.0
     # via requests
 click==8.1.3
     # via pip-tools
+cmdstanpy==1.1.0
+    # via -r requirements.in
 colorama==0.4.6
     # via cook-build
 comm==0.1.3
@@ -192,6 +194,7 @@ notebook-shim==0.2.3
     # via jupyterlab
 numpy==1.25.0
     # via
+    #   cmdstanpy
     #   contourpy
     #   matplotlib
     #   pandas
@@ -213,7 +216,9 @@ packaging==23.1
     #   nbconvert
     #   pytest
 pandas==2.0.2
-    # via -r requirements.in
+    # via
+    #   -r requirements.in
+    #   cmdstanpy
 pandocfilters==1.5.0
     # via nbconvert
 parso==0.8.3
@@ -364,6 +369,7 @@ tornado==6.3.2
 tqdm==4.65.0
     # via
     #   -r requirements.in
+    #   cmdstanpy
     #   torch-geometric
 traitlets==5.9.0
     # via
