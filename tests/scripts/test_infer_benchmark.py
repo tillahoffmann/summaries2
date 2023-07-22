@@ -6,7 +6,7 @@ from summaries.scripts.infer_benchmark import __main__
 from summaries.scripts.simulate_data import __main__ as __main__simulate_data
 
 
-def test_coalescent_infer(tmp_path: Path) -> None:
+def test_benchmark_infer(tmp_path: Path) -> None:
     observed_path = tmp_path / "observed.pkl"
     __main__simulate_data(map(str, ["--n-samples=7", "BenchmarkSimulationConfig", observed_path]))
 
