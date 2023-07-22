@@ -5,11 +5,11 @@ from pathlib import Path
 import pickle
 import pytest
 from sklearn.linear_model import LinearRegression
+from summaries.experiments.benchmark import BenchmarkPosteriorMixtureDensityTransformer
 from summaries.experiments.tree import TreePosteriorMixtureDensityTransformer
 from summaries.scripts.infer_posterior import __main__, INFERENCE_CONFIGS, InferenceConfig
 from summaries.scripts.preprocess_coalescent import __main__ as __main__preprocess_coalescent
 from summaries.scripts.simulate_data import __main__ as __main__simulate_data
-from summaries.scripts.configs import TreeSimulationConfig
 from summaries.transformers import as_transformer, MinimumConditionalEntropyTransformer, \
     NeuralTransformer, Transformer
 from torch import nn
@@ -47,7 +47,7 @@ class DummyMinimumConditionalEntropyConfig(DummyConfig):
 
 @pytest.mark.parametrize("config", [DummyPredictorConfig, DummyMinimumConditionalEntropyConfig])
 def test_infer(simulated_data: np.ndarray, simulated_params: np.ndarray, observed_data: np.ndarray,
-               tmp_path: Path, config: Type[DummyConfig]) -> None:
+               latent_params: np.ndarray, tmp_path: Path, config: Type[DummyConfig]) -> None:
     # Create paths and write the data to disk.
     simulated_path = tmp_path / "simulated.pkl"
     observed_path = tmp_path / "observed.pkl"
@@ -62,6 +62,7 @@ def test_infer(simulated_data: np.ndarray, simulated_params: np.ndarray, observe
     with observed_path.open("wb") as fp:
         pickle.dump({
             "data": observed_data[:7],
+            "params": latent_params[:7],
         }, fp)
 
     with mock.patch.dict(INFERENCE_CONFIGS, test=config):
@@ -72,7 +73,7 @@ def test_infer(simulated_data: np.ndarray, simulated_params: np.ndarray, observe
 
     # Verify the shape of the sample.
     assert output["samples"].shape == (7, 11, simulated_params.shape[-1])
-
+    np.testing.assert_allclose(output["params"][:7], latent_params[:7])
     pytest.shared.assert_pickle_loadable(output_path)
 
 
@@ -112,9 +113,10 @@ def test_tree_infer(config: str, tmp_path: Path) -> None:
     simulated_path = tmp_path / "simulated.pkl"
     observed_path = tmp_path / "observed.pkl"
 
-    with mock.patch.object(TreeSimulationConfig, "N_NODES", 17):
-        __main__simulate_data(["--n-samples=37", "TreeSimulationConfig", str(simulated_path)])
-        __main__simulate_data(["--n-samples=5", "TreeSimulationConfig", str(observed_path)])
+    __main__simulate_data(["--n-samples=37", "--n-observations=10", "TreeSimulationConfig",
+                           str(simulated_path)])
+    __main__simulate_data(["--n-samples=5", "--n-observations=10", "TreeSimulationConfig",
+                           str(observed_path)])
 
     output_path = tmp_path / "output.pkl"
     argv = ["--n-samples=3", config, tmp_path / "simulated.pkl", tmp_path / "observed.pkl",
@@ -137,3 +139,4 @@ def test_tree_infer(config: str, tmp_path: Path) -> None:
     assert output["samples"].shape == (5, 3, 1)
 
     pytest.shared.assert_pickle_loadable(output_path)
+

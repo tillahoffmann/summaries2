@@ -174,6 +174,7 @@ def __main__(argv: List[str] | None = None) -> None:
             "end": datetime.now(),
             "samples": samples,
             "pipeline": pipeline,
+            "params": observed["params"],
         }, fp)
 
 

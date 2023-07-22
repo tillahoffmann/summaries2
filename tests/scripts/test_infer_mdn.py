@@ -18,10 +18,12 @@ def test_infer_mdn(tmp_path: Path, observed_data: np.ndarray) -> None:
     output_path = tmp_path / "output.pkl"
     mdn_path = tmp_path / "mdn.pkl"
     observed_path = tmp_path / "observed.pkl"
+    params = np.random.normal(0, 1, (observed_data.shape[0], 2))
 
     with observed_path.open("wb") as fp:
         pickle.dump({
             "data": observed_data,
+            "params": params,
         }, fp)
 
     with mdn_path.open("wb") as fp:
@@ -35,6 +37,7 @@ def test_infer_mdn(tmp_path: Path, observed_data: np.ndarray) -> None:
         output = pickle.load(fp)
 
     assert output["samples"].shape == (observed_data.shape[0], 17, 1)
+    np.testing.assert_allclose(output["params"], params)
     pytest.shared.assert_pickle_loadable(output_path)
 
 
@@ -44,10 +47,12 @@ def test_infer_mdn_tree(tmp_path: Path) -> None:
     observed_path = tmp_path / "observed.pkl"
 
     observed_data = torch.randint(0, 10, (7, 9))
+    params = torch.randn(7, 2)
 
     with observed_path.open("wb") as fp:
         pickle.dump({
             "data": observed_data,
+            "params": params,
         }, fp)
 
     with mdn_path.open("wb") as fp:
@@ -62,4 +67,5 @@ def test_infer_mdn_tree(tmp_path: Path) -> None:
         output = pickle.load(fp)
 
     assert output["samples"].shape == (observed_data.shape[0], 17, 1)
+    torch.testing.assert_close(output["params"], params)
     pytest.shared.assert_pickle_loadable(output_path)
