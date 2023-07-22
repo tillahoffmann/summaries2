@@ -9,6 +9,7 @@ from ..experiments.tree import compress_tree, simulate_tree
 
 class SimulationArgs:
     n_samples: int | None
+    n_observations: int | None
     seed: int | None
     config: str
     output: Path
@@ -29,11 +30,12 @@ class TreeSimulationConfig(SimulationConfig):
 
     def simulate(self) -> Dict[str, Any]:
         n_samples = self.args.n_samples or self.N_SAMPLES
+        n_nodes = self.args.n_observations or self.N_NODES
         random_state = np.random.RandomState(self.args.seed)
         simulations = {}
         for _ in tqdm(range(n_samples)):
             gamma = self.PRIOR.rvs(random_state=random_state)
-            tree = simulate_tree(self.N_NODES, gamma, seed=random_state)
+            tree = simulate_tree(n_nodes, gamma, seed=random_state)
             simulations.setdefault("data", []).append(compress_tree(tree))
             simulations.setdefault("params", []).append(gamma)
 
