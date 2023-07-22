@@ -13,6 +13,7 @@ create_task("tests", action="pytest -v --cov=summaries --cov-report=html --cov-f
 
 
 ROOT = Path("workspace")
+BENCHMARK_ROOT = ROOT / "benchmark"
 COALESCENT_ROOT = ROOT / "coalescent"
 TREE_ROOT = ROOT / "tree"
 
@@ -171,5 +172,62 @@ def create_tree_tasks() -> None:
     return samples
 
 
+def simulate_benchmark_data() -> Dict[str, Path]:
+    data_root = BENCHMARK_ROOT / "data"
+
+    split_paths = {}
+    splits = {"train": (1_000_000, 0), "validation": (10_000, 1), "test": (1_000, 2),
+              "debug": (10, 3)}
+    for split, (n_samples, seed) in splits.items():
+        target = data_root / f"{split}.pkl"
+        action = ["python", "-m", "summaries.scripts.simulate_data", f"--n-samples={n_samples}",
+                  f"--seed={seed}", "BenchmarkSimulationConfig", target]
+        create_task(f"benchmark:data:{split}", targets=[target], action=action)
+        split_paths[split] = target
+    return split_paths
+
+
+def train_benchmark_transformers(splits: Dict[str, Path]) -> Dict[str, Path]:
+    """
+    Train transformers for the benchmark dataset.
+    """
+    targets = {}
+    for config in TRAIN_CONFIGS:
+        if not config.startswith("Benchmark"):
+            continue
+        targets[config] = train_transformer("benchmark", config, splits)
+    return targets
+
+
+def create_benchmark_tasks() -> None:
+    splits = simulate_benchmark_data()
+    transformers = train_benchmark_transformers(splits)
+    samples = {
+        config: infer_posterior(splits, "BenchmarkNeuralConfig", "benchmark", transformer) for
+        config, transformer in transformers.items()
+    }
+    samples |= {
+        config: infer_posterior(splits, config, "benchmark") for config in INFERENCE_CONFIGS if
+        config.startswith("Benchmark") and config != "BenchmarkNeuralConfig"
+    }
+
+    # Add the Stan likelihood-based sampler.
+    target = BENCHMARK_ROOT / "samples" / "BenchmarkStanConfig.pkl"
+    action = ["python", "-m", "summaries.scripts.infer_benchmark", splits["test"], target]
+    samples["BenchmarkStanConfig"] = create_task(
+        "benchmark:infer:stan", dependencies=[splits["test"]], targets=[target], action=action,
+    )
+
+    samples["BenchmarkMixtureDensityConfig"] = infer_mdn_posterior(
+        splits, "benchmark", transformers["BenchmarkMixtureDensityConfig"]
+    )
+    samples["BenchmarkMixtureDensityConfigReduced"] = infer_mdn_posterior(
+        splits, "benchmark", transformers["BenchmarkMixtureDensityConfigReduced"]
+    )
+
+    return samples
+
+
+create_benchmark_tasks()
 create_coalescent_tasks()
 create_tree_tasks()

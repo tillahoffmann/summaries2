@@ -13,6 +13,8 @@ from torch_geometric.data import Data as GeometricData
 from torch_geometric.loader import DataLoader as GeometricDataLoader
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
+from ..experiments.benchmark import BenchmarkPosteriorMeanTransformer, \
+    BenchmarkPosteriorMixtureDensityTransformer
 from ..experiments.coalescent import CoalescentPosteriorMixtureDensityTransformer, \
     CoalescentPosteriorMeanTransformer
 from ..experiments.tree import predecessors_to_datasets, TreePosteriorMixtureDensityTransformer
@@ -46,12 +48,41 @@ class TrainConfig:
     def create_data_loader(self, path: Path, **kwargs: Any) -> DataLoader:
         with path.open("rb") as fp:
             result = pickle.load(fp)
+        kwargs = self.DATA_LOADER_KWARGS | kwargs
         dtype = kwargs.pop("dtype", get_default_dtype())
         device = kwargs.pop("device", None)
         data = as_tensor(result["data"], dtype=dtype, device=device)
         params = as_tensor(result["params"], dtype=dtype, device=device)
         dataset = TensorDataset(data, params)
         return DataLoader(dataset, **kwargs)
+
+
+class BenchmarkTrainConfig(TrainConfig):
+    DATA_LOADER_KWARGS = {
+        "batch_size": 512,
+        "shuffle": True,
+    }
+
+
+class BenchmarkPosteriorMeanConfig(BenchmarkTrainConfig):
+    LOSS = nn.MSELoss()
+
+    def create_transformer(self):
+        return BenchmarkPosteriorMeanTransformer()
+
+
+class BenchmarkMixtureDensityConfig(BenchmarkTrainConfig):
+    LOSS = NegLogProbLoss()
+
+    def create_transformer(self):
+        return BenchmarkPosteriorMixtureDensityTransformer()
+
+
+class BenchmarkMixtureDensityConfigReduced(BenchmarkTrainConfig):
+    LOSS = NegLogProbLoss()
+
+    def create_transformer(self):
+        return BenchmarkPosteriorMixtureDensityTransformer(2)
 
 
 class CoalescentTrainConfig(TrainConfig):
@@ -97,6 +128,9 @@ class TreeMixtureDensityConfig(TreeTrainConfig):
 
 
 TRAIN_CONFIGS = [
+    BenchmarkPosteriorMeanConfig,
+    BenchmarkMixtureDensityConfig,
+    BenchmarkMixtureDensityConfigReduced,
     CoalescentMixtureDensityConfig,
     CoalescentPosteriorMeanConfig,
     TreeMixtureDensityConfig,
@@ -140,7 +174,7 @@ def __main__(argv: Optional[List[str]] = None) -> None:
         break
 
     # Run the training.
-    optim = Adam(transformer.parameters(), 0.001)
+    optim = Adam(transformer.parameters(), 0.01)
     scheduler = ReduceLROnPlateau(optim, verbose=True)
     stop_patience = 2 * scheduler.patience
     n_stop_patience_digits = len(str(stop_patience))

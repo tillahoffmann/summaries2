@@ -72,6 +72,42 @@ class CoalescentNeuralConfig(CoalescentConfig):
             return pickle.load(fp)["transformer"]
 
 
+class BenchmarkConfig(InferenceConfig):
+    N_SAMPLES = 1_000
+
+    def create_preprocessor(self) -> Transformer | None:
+        return FunctionTransformer(self._evaluate_summaries)
+
+    def _evaluate_summaries(self, observed_data: np.ndarray) -> np.ndarray:
+        # The dataset has shape (n_examples, n_observations, 1), and we evaluate the first few
+        # moments to get (n_examples, n_moments) as candidate summaries.
+        assert observed_data.ndim == 3
+        return np.mean(observed_data ** (2 * np.arange(1, 4)), axis=-2)
+
+
+class BenchmarkMinimumConditionalEntropyConfig(BenchmarkConfig):
+    IS_DATA_DEPENDENT = True
+
+    def create_transformer(self, observed_data: np.ndarray) -> Transformer:
+        return MinimumConditionalEntropyTransformer(observed_data, n_samples=self.n_samples,
+                                                    thin=10)
+
+
+class BenchmarkLinearPosteriorMeanConfig(BenchmarkConfig):
+    def create_transformer(self, observed_data: Any | None = None) -> Transformer:
+        return as_transformer(LinearRegression)()
+
+
+class BenchmarkNeuralConfig(BenchmarkConfig):
+    def create_transformer(self, observed_data: Any | None = None) -> Transformer:
+        with open(self.args.transformer_kwargs["transformer"], "rb") as fp:
+            return pickle.load(fp)["transformer"]
+
+    def create_preprocessor(self) -> None:
+        # Overwrite the preprocessor to ensure we pass the raw data to the neural networks.
+        return None
+
+
 class TreeKernelConfig(InferenceConfig):
     N_SAMPLES = 1000
 
@@ -106,6 +142,9 @@ class TreeKernelNeuralConfig(TreeKernelConfig):
 
 
 INFERENCE_CONFIGS = [
+    BenchmarkLinearPosteriorMeanConfig,
+    BenchmarkMinimumConditionalEntropyConfig,
+    BenchmarkNeuralConfig,
     CoalescentLinearPosteriorMeanConfig,
     CoalescentMinimumConditionalEntropyConfig,
     CoalescentNeuralConfig,

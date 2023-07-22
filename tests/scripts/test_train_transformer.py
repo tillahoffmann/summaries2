@@ -9,6 +9,28 @@ from torch import as_tensor, nn, Tensor
 from unittest import mock
 
 
+@pytest.mark.parametrize("config", [x for x in TRAIN_CONFIGS if x.startswith("Benchmark")])
+def test_train_transformer_benchmark(config: str, tmp_path: Path) -> None:
+    # Generate two datasets.
+    train_path = tmp_path / "train.pkl"
+    validation_path = tmp_path / "validation.pkl"
+    for path in [train_path, validation_path]:
+        __main__simulate_data(["BenchmarkSimulationConfig", "--n-observations=13", "--n-samples=37",
+                               str(path)])
+
+    output_path = tmp_path / "output.pkl"
+    argv = [config, tmp_path / "train.pkl", tmp_path / "validation.pkl", output_path]
+
+    with mock.patch.object(TRAIN_CONFIGS[config], "MAX_EPOCHS", 2):
+        __main__(map(str, argv))
+
+    pytest.shared.assert_pickle_loadable(output_path)
+    with output_path.open("rb") as fp:
+        result = pickle.load(fp)
+
+    assert isinstance(result["transformer"], nn.Module)
+
+
 @pytest.mark.parametrize("config", [x for x in TRAIN_CONFIGS if x.startswith("Coalescent")])
 def test_train_transformer_coalescent(config: str, tmp_path: Path) -> None:
     # Split up the data to test and training sets.

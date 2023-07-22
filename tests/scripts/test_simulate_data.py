@@ -15,3 +15,7 @@ def test_simulate_data(config: str, tmp_path: Path) -> None:
 
     assert result["params"].ndim == 2
     assert result["params"].shape[0] == 13
+
+    if config == "BenchmarkSimulationConfig":
+        assert result["params"].shape == (13, 1)
+        assert result["data"].shape == (13, 17, 1)

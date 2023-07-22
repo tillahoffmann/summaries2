@@ -140,3 +140,34 @@ def test_tree_infer(config: str, tmp_path: Path) -> None:
 
     pytest.shared.assert_pickle_loadable(output_path)
 
+
+@pytest.mark.parametrize("config", [x for x in INFERENCE_CONFIGS if x.startswith("Benchmark")])
+def test_benchmark_infer(config: str, tmp_path: Path) -> None:
+    # Generate some data.
+    simulated_path = tmp_path / "simulated.pkl"
+    observed_path = tmp_path / "observed.pkl"
+
+    __main__simulate_data(["--n-samples=37", "BenchmarkSimulationConfig", str(simulated_path)])
+    __main__simulate_data(["--n-samples=5", "BenchmarkSimulationConfig", str(observed_path)])
+
+    output_path = tmp_path / "output.pkl"
+    argv = ["--n-samples=3", config, tmp_path / "simulated.pkl", tmp_path / "observed.pkl",
+            output_path]
+
+    # Dump a simple transformer if required.
+    if config == "BenchmarkNeuralConfig":
+        transformer = tmp_path / "transformer.pkl"
+        with transformer.open("wb") as fp:
+            pickle.dump({
+                "transformer": BenchmarkPosteriorMixtureDensityTransformer(2),
+            }, fp)
+        argv.extend(["--transformer-kwargs", json.dumps({"transformer": str(transformer)})])
+
+    __main__(map(str, argv))
+
+    with output_path.open("rb") as fp:
+        output = pickle.load(fp)
+
+    assert output["samples"].shape == (5, 3, 1)
+
+    pytest.shared.assert_pickle_loadable(output_path)
