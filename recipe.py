@@ -13,7 +13,6 @@ create_task("tests", action="pytest -v --cov=summaries --cov-report=html --cov-f
 
 
 ROOT = Path("workspace")
-BENCHMARK_ROOT = ROOT / "benchmark"
 COALESCENT_ROOT = ROOT / "coalescent"
 TREE_ROOT = ROOT / "tree"
 
@@ -43,7 +42,7 @@ def prepare_coalescent_data() -> Dict[str, Path]:
     return split_targets
 
 
-def train_transformer(category: str, config: str, splits: Dict[str, Path]) -> Dict[str, Path]:
+def train_transformer(category: str, config: str, splits: Dict[str, Path]) -> Path:
     """
     Train a single transformer.
     """
@@ -65,13 +64,13 @@ def train_coalescent_transformers(splits: Dict[str, Path]) -> Dict[str, Path]:
 
 
 def infer_posterior(splits: Dict[str, Path], config: str, category: str,
-                    transformer: Path | None = None) -> Path:
+                    transformer: Path | None = None, name: str | None = None) -> Path:
     dependencies = [splits["train"], splits["test"]]
-    name = config
+    name = name or config
     if transformer:
         dependencies.append(transformer)
         kwargs = {"transformer": str(transformer)}
-        name = f"{config}-{transformer.with_suffix('').name}"
+        name = f"{name}-{transformer.with_suffix('').name}"
     else:
         kwargs = {}
 
@@ -117,33 +116,35 @@ def create_coalescent_tasks() -> Dict[str, Path]:
     return sample_targets
 
 
-def simulate_tree_data() -> Dict[str, Path]:
-    data_root = TREE_ROOT / "data"
+def simulate_tree_data(folder: str, n_observations: int) -> Dict[str, Path]:
+    data_root = ROOT / f"tree-{folder}" / "data"
 
     split_paths = {}
     splits = {"train": (100_000, 0), "validation": (1_000, 1), "test": (1_000, 2), "debug": (10, 3)}
     for split, (n_samples, seed) in splits.items():
         target = data_root / f"{split}.pkl"
-        action = ["python", "-m", "summaries.scripts.simulate_data", f"--n-samples={n_samples}",
-                  f"--seed={seed}", "TreeSimulationConfig", target]
-        create_task(f"tree:data:{split}", targets=[target], action=action)
+        action = [
+            "python", "-m", "summaries.scripts.simulate_data", f"--n-samples={n_samples}",
+            f"--seed={seed}", f"--n-observations={n_observations}", "TreeSimulationConfig", target
+        ]
+        create_task(f"tree-{folder}:data:{split}", targets=[target], action=action)
         split_paths[split] = target
     return split_paths
 
 
-def infer_tree_posterior_with_history_sampler(splits: Dict[str, Path]) -> Path:
+def infer_tree_posterior_with_history_sampler(folder: str, splits: Dict[str, Path]) -> Path:
     config = "TreeKernelHistorySamplerConfig"
-    posterior_target = ROOT / f"tree/samples/{config}.pkl"
+    posterior_target = ROOT / f"tree-{folder}/samples/{config}.pkl"
     action = [
         "python", "-m", "summaries.scripts.infer_tree_posterior", "--n-samples=1000",
         splits["test"], posterior_target,
     ]
-    create_task(f"tree:infer:{config}", dependencies=[splits["test"]], targets=[posterior_target],
-                action=action)
+    create_task(f"tree-{folder}:infer:{config}", dependencies=[splits["test"]],
+                targets=[posterior_target], action=action)
     return posterior_target
 
 
-def train_tree_transformers(splits: Dict[str, Path]) -> Dict[str, Path]:
+def train_tree_transformers(folder: str, splits: Dict[str, Path]) -> Dict[str, Path]:
     """
     Train transformers for the tree dataset.
     """
@@ -151,29 +152,29 @@ def train_tree_transformers(splits: Dict[str, Path]) -> Dict[str, Path]:
     for config in TRAIN_CONFIGS:
         if not config.startswith("Tree"):
             continue
-        targets[config] = train_transformer("tree", config, splits)
+        targets[config] = train_transformer(f"tree-{folder}", config, splits)
     return targets
 
 
-def create_tree_tasks() -> None:
-    splits = simulate_tree_data()
-    transformers = train_tree_transformers(splits)
+def create_tree_tasks(folder: str, n_observations: int) -> None:
+    splits = simulate_tree_data(folder, n_observations)
+    transformers = train_tree_transformers(folder, splits)
     samples = {
-        config: infer_posterior(splits, "TreeKernelNeuralConfig", "tree", transformer) for
+        config: infer_posterior(splits, "TreeKernelNeuralConfig", f"tree-{folder}", transformer) for
         config, transformer in transformers.items()
     }
     samples |= {
-        "TreeKernelHistorySamplerConfig": infer_tree_posterior_with_history_sampler(splits),
+        "TreeKernelHistorySamplerConfig": infer_tree_posterior_with_history_sampler(folder, splits),
     }
     samples |= {
-        config: infer_posterior(splits, config, "tree") for config in INFERENCE_CONFIGS if
+        config: infer_posterior(splits, config, f"tree-{folder}") for config in INFERENCE_CONFIGS if
         config.startswith("Tree") and config != "TreeKernelNeuralConfig"
     }
     return samples
 
 
-def simulate_benchmark_data() -> Dict[str, Path]:
-    data_root = BENCHMARK_ROOT / "data"
+def simulate_benchmark_data(folder: str, n_observations: int) -> Dict[str, Path]:
+    data_root = ROOT / f"benchmark-{folder}" / "data"
 
     split_paths = {}
     splits = {"train": (1_000_000, 0), "validation": (10_000, 1), "test": (1_000, 2),
@@ -181,13 +182,14 @@ def simulate_benchmark_data() -> Dict[str, Path]:
     for split, (n_samples, seed) in splits.items():
         target = data_root / f"{split}.pkl"
         action = ["python", "-m", "summaries.scripts.simulate_data", f"--n-samples={n_samples}",
-                  f"--seed={seed}", "BenchmarkSimulationConfig", target]
-        create_task(f"benchmark:data:{split}", targets=[target], action=action)
+                  f"--seed={seed}", f"--n-observations={n_observations}",
+                  "BenchmarkSimulationConfig", target]
+        create_task(f"benchmark-{folder}:data:{split}", targets=[target], action=action)
         split_paths[split] = target
     return split_paths
 
 
-def train_benchmark_transformers(splits: Dict[str, Path]) -> Dict[str, Path]:
+def train_benchmark_transformers(folder: str, splits: Dict[str, Path]) -> Dict[str, Path]:
     """
     Train transformers for the benchmark dataset.
     """
@@ -195,39 +197,79 @@ def train_benchmark_transformers(splits: Dict[str, Path]) -> Dict[str, Path]:
     for config in TRAIN_CONFIGS:
         if not config.startswith("Benchmark"):
             continue
-        targets[config] = train_transformer("benchmark", config, splits)
+        targets[config] = train_transformer(f"benchmark-{folder}", config, splits)
     return targets
 
 
 def create_benchmark_tasks() -> None:
-    splits = simulate_benchmark_data()
-    transformers = train_benchmark_transformers(splits)
-    samples = {
-        config: infer_posterior(splits, "BenchmarkNeuralConfig", "benchmark", transformer) for
-        config, transformer in transformers.items()
+    small_splits = simulate_benchmark_data("small", 10)
+    large_splits = simulate_benchmark_data("large", 100)
+
+    transformers = train_benchmark_transformers("small", small_splits)
+    samples_small = {
+        config: infer_posterior(small_splits, "BenchmarkNeuralConfig", "benchmark-small",
+                                transformer) for config, transformer in transformers.items()
     }
-    samples |= {
-        config: infer_posterior(splits, config, "benchmark") for config in INFERENCE_CONFIGS if
-        config.startswith("Benchmark") and config != "BenchmarkNeuralConfig"
+    samples_small |= {
+        config: infer_posterior(small_splits, config, "benchmark-small") for config in
+        INFERENCE_CONFIGS if config.startswith("Benchmark") and config != "BenchmarkNeuralConfig"
     }
+
+    # Train a mixture density network on the large dataset.
+    mdn_compressor_large = train_transformer("benchmark-large", "BenchmarkMixtureDensityConfig",
+                                             large_splits)
+    reduced_mdn_compressor_large = train_transformer(
+        "benchmark-large", "BenchmarkMixtureDensityConfigReduced", large_splits
+    )
 
     # Add the Stan likelihood-based sampler.
-    target = BENCHMARK_ROOT / "samples" / "BenchmarkStanConfig.pkl"
-    action = ["python", "-m", "summaries.scripts.infer_benchmark", splits["test"], target]
-    samples["BenchmarkStanConfig"] = create_task(
-        "benchmark:infer:stan", dependencies=[splits["test"]], targets=[target], action=action,
+    target = ROOT / "benchmark-small" / "samples" / "BenchmarkStanConfig.pkl"
+    action = ["python", "-m", "summaries.scripts.infer_benchmark", small_splits["test"], target]
+    samples_small["BenchmarkStanConfig"] = create_task(
+        "benchmark-small:infer:stan", dependencies=[small_splits["test"]], targets=[target],
+        action=action
     )
 
-    samples["BenchmarkMixtureDensityConfig"] = infer_mdn_posterior(
-        splits, "benchmark", transformers["BenchmarkMixtureDensityConfig"]
-    )
-    samples["BenchmarkMixtureDensityConfigReduced"] = infer_mdn_posterior(
-        splits, "benchmark", transformers["BenchmarkMixtureDensityConfigReduced"]
+    target = ROOT / "benchmark-large" / "samples" / "BenchmarkStanConfig.pkl"
+    action = ["python", "-m", "summaries.scripts.infer_benchmark", large_splits["test"], target]
+    samples_small["BenchmarkStanConfig"] = create_task(
+        "benchmark-large:infer:stan", dependencies=[large_splits["test"]], targets=[target],
+        action=action
     )
 
-    return samples
+    samples_small["BenchmarkMixtureDensityConfig"] = infer_mdn_posterior(
+        small_splits, "benchmark-small", transformers["BenchmarkMixtureDensityConfig"]
+    )
+    samples_small["BenchmarkMixtureDensityConfigReduced"] = infer_mdn_posterior(
+        small_splits, "benchmark-small", transformers["BenchmarkMixtureDensityConfigReduced"]
+    )
+
+    # Mixture density using the neural compressor on the large dataset.
+    samples_large = {
+        "BenchmarkNeuralConfig-large": infer_posterior(
+            large_splits, "BenchmarkNeuralConfig", "benchmark-large",
+            transformer=mdn_compressor_large, name="BenchmarkNeuralConfig-large",
+        ),
+        "BenchmarkNeuralConfig-large-reduced": infer_posterior(
+            large_splits, "BenchmarkNeuralConfig", "benchmark-large",
+            transformer=reduced_mdn_compressor_large, name="BenchmarkNeuralConfig-large",
+        ),
+        "BenchmarkNeuralConfig-small": infer_posterior(
+            large_splits, "BenchmarkNeuralConfig", "benchmark-large",
+            transformer=transformers["BenchmarkMixtureDensityConfig"],
+            name="BenchmarkNeuralConfig-small",
+        ),
+        "BenchmarkNeuralConfig-small-reduced": infer_posterior(
+            large_splits, "BenchmarkNeuralConfig", "benchmark-large",
+            transformer=transformers["BenchmarkMixtureDensityConfigReduced"],
+            name="BenchmarkNeuralConfig-small",
+        ),
+    }
+
+    return samples_small, samples_large
 
 
 create_benchmark_tasks()
 create_coalescent_tasks()
-create_tree_tasks()
+create_tree_tasks("large", 748)
+create_tree_tasks("small", 100)
