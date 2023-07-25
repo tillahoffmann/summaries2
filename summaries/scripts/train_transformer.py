@@ -4,11 +4,12 @@ import itertools as it
 import numpy as np
 from pathlib import Path
 import pickle
+from snippets.tensor_data_loader import TensorDataLoader
 from torch import as_tensor, get_default_dtype, nn, no_grad, Tensor
 import torch
 from torch.optim import Adam
 from torch.optim.lr_scheduler import ReduceLROnPlateau
-from torch.utils.data import DataLoader, TensorDataset
+from torch.utils.data import TensorDataset
 from torch_geometric.data import Data as GeometricData
 from torch_geometric.loader import DataLoader as GeometricDataLoader
 from typing import Any, Callable, Dict, List, Optional, Tuple
@@ -45,7 +46,7 @@ class TrainConfig:
     def create_transformer(self):
         raise NotImplementedError
 
-    def create_data_loader(self, path: Path, **kwargs: Any) -> DataLoader:
+    def create_data_loader(self, path: Path, **kwargs: Any) -> TensorDataLoader:
         with path.open("rb") as fp:
             result = pickle.load(fp)
         kwargs = self.DATA_LOADER_KWARGS | kwargs
@@ -54,7 +55,7 @@ class TrainConfig:
         data = as_tensor(result["data"], dtype=dtype, device=device)
         params = as_tensor(result["params"], dtype=dtype, device=device)
         dataset = TensorDataset(data, params)
-        return DataLoader(dataset, **kwargs)
+        return TensorDataLoader(dataset, **kwargs)
 
 
 class BenchmarkTrainConfig(TrainConfig):
@@ -112,7 +113,7 @@ class TreeTrainConfig(TrainConfig):
         "shuffle": True,
     }
 
-    def create_data_loader(self, path: Path, **kwargs: Any) -> DataLoader:
+    def create_data_loader(self, path: Path, **kwargs: Any) -> GeometricDataLoader:
         with path.open("rb") as fp:
             result = pickle.load(fp)
         device = kwargs.pop("device", None)

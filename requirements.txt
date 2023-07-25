@@ -282,6 +282,7 @@ pytest-cov==4.1.0
     # via -r requirements.in
 python-dateutil==2.8.2
     # via
+    #   arrow
     #   jupyter-client
     #   matplotlib
     #   pandas
@@ -339,7 +340,7 @@ six==1.16.0
     #   rfc3339-validator
 sniffio==1.3.0
     # via anyio
-snippets @ git+https://github.com/tillahoffmann/snippets.git@3d0e2059bd634be709739879046fa751c8862bd6
+snippets @ git+https://github.com/tillahoffmann/snippets.git@909a37f
     # via -r requirements.in
 soupsieve==2.4.1
     # via beautifulsoup4
