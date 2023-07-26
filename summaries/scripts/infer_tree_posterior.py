@@ -58,6 +58,7 @@ def __main__(argv: List[str] | None = None) -> None:
     result["map_estimate"] = result["map_estimate"].reshape((n_observed, 1))
     result["args"] = vars(args)
     result["lin"] = lin
+    result["params"] = observed["params"]
 
     with open(args.output, "wb") as fp:
         pickle.dump(result, fp)

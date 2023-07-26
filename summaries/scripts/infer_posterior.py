@@ -49,6 +49,18 @@ class InferenceConfig:
         return self.args.n_samples or self.N_SAMPLES
 
 
+class PriorConfig(InferenceConfig):
+    N_SAMPLES = 1_000
+
+    def create_transformer(self, observed_data: Any | None = None) -> Transformer:
+        return FunctionTransformer(self._evaluate_random_features)
+
+    def _evaluate_random_features(self, X: np.ndarray) -> np.ndarray:
+        # Whatever randomness we have here really doesn't matter because we use these features to
+        # pick anything from the reference table.
+        return np.random.normal(0, 1, (X.shape[0], 1))
+
+
 class CoalescentConfig(InferenceConfig):
     N_SAMPLES = 1_000
 
@@ -70,6 +82,47 @@ class CoalescentNeuralConfig(CoalescentConfig):
     def create_transformer(self, observed_data: Any | None = None) -> Transformer:
         with open(self.args.transformer_kwargs["transformer"], "rb") as fp:
             return pickle.load(fp)["transformer"]
+
+
+class BenchmarkConfig(InferenceConfig):
+    N_SAMPLES = 1_000
+
+    def create_preprocessor(self) -> Transformer | None:
+        return FunctionTransformer(self._evaluate_summaries)
+
+    def _evaluate_summaries(self, observed_data: np.ndarray) -> np.ndarray:
+        # The dataset has shape (n_examples, n_observations, 1 + n_noise_features), and we evaluate
+        # the first few moments to get (n_examples, (1 + n_noise_features) * n_moments) as candidate
+        # summaries.
+        assert observed_data.ndim == 3
+        n_examples, n_observations, n_features = observed_data.shape
+        n_moments = 3
+        expanded = observed_data[..., None] ** (2 * (1 + np.arange(n_moments)))
+        assert expanded.shape == (n_examples, n_observations, n_features, n_moments)
+        return expanded.mean(axis=1).reshape((n_examples, n_features * n_moments))
+
+
+class BenchmarkMinimumConditionalEntropyConfig(BenchmarkConfig):
+    IS_DATA_DEPENDENT = True
+
+    def create_transformer(self, observed_data: np.ndarray) -> Transformer:
+        return MinimumConditionalEntropyTransformer(observed_data, n_samples=self.n_samples,
+                                                    thin=10)
+
+
+class BenchmarkLinearPosteriorMeanConfig(BenchmarkConfig):
+    def create_transformer(self, observed_data: Any | None = None) -> Transformer:
+        return as_transformer(LinearRegression)()
+
+
+class BenchmarkNeuralConfig(BenchmarkConfig):
+    def create_transformer(self, observed_data: Any | None = None) -> Transformer:
+        with open(self.args.transformer_kwargs["transformer"], "rb") as fp:
+            return pickle.load(fp)["transformer"]
+
+    def create_preprocessor(self) -> None:
+        # Overwrite the preprocessor to ensure we pass the raw data to the neural networks.
+        return None
 
 
 class TreeKernelConfig(InferenceConfig):
@@ -106,11 +159,15 @@ class TreeKernelNeuralConfig(TreeKernelConfig):
 
 
 INFERENCE_CONFIGS = [
+    BenchmarkLinearPosteriorMeanConfig,
+    BenchmarkMinimumConditionalEntropyConfig,
+    BenchmarkNeuralConfig,
     CoalescentLinearPosteriorMeanConfig,
     CoalescentMinimumConditionalEntropyConfig,
     CoalescentNeuralConfig,
     TreeKernelExpertSummaryConfig,
     TreeKernelNeuralConfig,
+    PriorConfig,
 ]
 INFERENCE_CONFIGS = {config.__name__: config for config in INFERENCE_CONFIGS}
 
@@ -173,7 +230,7 @@ def __main__(argv: List[str] | None = None) -> None:
             "start": start,
             "end": datetime.now(),
             "samples": samples,
-            "pipeline": pipeline,
+            "params": observed["params"],
         }, fp)
 
 

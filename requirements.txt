@@ -6,7 +6,7 @@
 #
 -e file:.
     # via -r requirements.in
-anyio==3.7.0
+anyio==3.7.1
     # via jupyter-server
 appnope==0.1.3
     # via
@@ -20,10 +20,12 @@ arrow==1.2.3
     # via isoduration
 asttokens==2.2.1
     # via stack-data
-async-lru==2.0.2
+async-lru==2.0.3
     # via jupyterlab
 attrs==23.1.0
-    # via jsonschema
+    # via
+    #   jsonschema
+    #   referencing
 babel==2.12.1
     # via jupyterlab-server
 backcall==0.2.0
@@ -38,17 +40,19 @@ certifi==2023.5.7
     # via requests
 cffi==1.15.1
     # via argon2-cffi-bindings
-charset-normalizer==3.1.0
+charset-normalizer==3.2.0
     # via requests
-click==8.1.3
+click==8.1.5
     # via pip-tools
+cmdstanpy==1.1.0
+    # via -r requirements.in
 colorama==0.4.6
     # via cook-build
 comm==0.1.3
     # via ipykernel
 contourpy==1.1.0
     # via matplotlib
-cook-build==0.2.2
+cook-build==0.3.0
     # via -r requirements.in
 coverage[toml]==7.2.7
     # via pytest-cov
@@ -60,7 +64,7 @@ decorator==5.1.1
     # via ipython
 defusedxml==0.7.1
     # via nbconvert
-exceptiongroup==1.1.1
+exceptiongroup==1.1.2
     # via
     #   anyio
     #   pytest
@@ -74,7 +78,7 @@ filelock==3.12.2
     # via torch
 flake8==6.0.0
     # via -r requirements.in
-fonttools==4.40.0
+fonttools==4.41.0
     # via matplotlib
 fqdn==1.5.1
     # via jsonschema
@@ -85,7 +89,7 @@ idna==3.4
     #   requests
 iniconfig==2.0.0
     # via pytest
-ipykernel==6.23.3
+ipykernel==6.24.0
     # via jupyterlab
 ipython==8.14.0
     # via ipykernel
@@ -101,17 +105,19 @@ jinja2==3.1.2
     #   nbconvert
     #   torch
     #   torch-geometric
-joblib==1.2.0
+joblib==1.3.1
     # via scikit-learn
 json5==0.9.14
     # via jupyterlab-server
 jsonpointer==2.4
     # via jsonschema
-jsonschema[format-nongpl]==4.17.3
+jsonschema[format-nongpl]==4.18.4
     # via
     #   jupyter-events
     #   jupyterlab-server
     #   nbformat
+jsonschema-specifications==2023.7.1
+    # via jsonschema
 jupyter-client==8.3.0
     # via
     #   ipykernel
@@ -130,7 +136,7 @@ jupyter-events==0.6.3
     # via jupyter-server
 jupyter-lsp==2.2.0
     # via jupyterlab
-jupyter-server==2.6.0
+jupyter-server==2.7.0
     # via
     #   jupyter-lsp
     #   jupyterlab
@@ -138,17 +144,17 @@ jupyter-server==2.6.0
     #   notebook-shim
 jupyter-server-terminals==0.4.4
     # via jupyter-server
-jupyterlab==4.0.2
+jupyterlab==4.0.3
     # via -r requirements.in
 jupyterlab-pygments==0.2.2
     # via nbconvert
 jupyterlab-server==2.23.0
     # via jupyterlab
-jupytext==1.14.6
+jupytext==1.14.7
     # via -r requirements.in
 kiwisolver==1.4.4
     # via matplotlib
-markdown-it-py==2.2.0
+markdown-it-py==3.0.0
     # via
     #   jupytext
     #   mdit-py-plugins
@@ -156,7 +162,7 @@ markupsafe==2.1.3
     # via
     #   jinja2
     #   nbconvert
-matplotlib==3.7.1
+matplotlib==3.7.2
     # via -r requirements.in
 matplotlib-inline==0.1.6
     # via
@@ -174,9 +180,9 @@ mpmath==1.3.0
     # via sympy
 nbclient==0.8.0
     # via nbconvert
-nbconvert==7.6.0
+nbconvert==7.7.1
     # via jupyter-server
-nbformat==5.9.0
+nbformat==5.9.1
     # via
     #   jupyter-server
     #   jupytext
@@ -186,12 +192,14 @@ nest-asyncio==1.5.6
     # via ipykernel
 networkx==3.1
     # via
+    #   cook-build
     #   summaries
     #   torch
 notebook-shim==0.2.3
     # via jupyterlab
-numpy==1.25.0
+numpy==1.25.1
     # via
+    #   cmdstanpy
     #   contourpy
     #   matplotlib
     #   pandas
@@ -212,8 +220,10 @@ packaging==23.1
     #   matplotlib
     #   nbconvert
     #   pytest
-pandas==2.0.2
-    # via -r requirements.in
+pandas==2.0.3
+    # via
+    #   -r requirements.in
+    #   cmdstanpy
 pandocfilters==1.5.0
     # via nbconvert
 parso==0.8.3
@@ -222,17 +232,17 @@ pexpect==4.8.0
     # via ipython
 pickleshare==0.7.5
     # via ipython
-pillow==9.5.0
+pillow==10.0.0
     # via matplotlib
-pip-tools==6.13.0
+pip-tools==7.0.0
     # via -r requirements.in
-platformdirs==3.8.0
+platformdirs==3.9.1
     # via jupyter-core
 pluggy==1.2.0
     # via pytest
-prometheus-client==0.17.0
+prometheus-client==0.17.1
     # via jupyter-server
-prompt-toolkit==3.0.38
+prompt-toolkit==3.0.39
     # via ipython
 psutil==5.9.5
     # via
@@ -244,7 +254,7 @@ ptyprocess==0.7.0
     #   terminado
 pure-eval==0.2.2
     # via stack-data
-pybind11==2.10.4
+pybind11==2.11.1
     # via
     #   -r requirements.in
     #   fasttr
@@ -258,14 +268,12 @@ pygments==2.15.1
     # via
     #   ipython
     #   nbconvert
-pyparsing==3.1.0
+pyparsing==3.0.9
     # via
     #   matplotlib
     #   torch-geometric
 pyproject-hooks==1.0.0
     # via build
-pyrsistent==0.19.3
-    # via jsonschema
 pytest==7.4.0
     # via
     #   -r requirements.in
@@ -274,6 +282,7 @@ pytest-cov==4.1.0
     # via -r requirements.in
 python-dateutil==2.8.2
     # via
+    #   arrow
     #   jupyter-client
     #   matplotlib
     #   pandas
@@ -281,7 +290,7 @@ python-json-logger==2.0.7
     # via jupyter-events
 pytz==2023.3
     # via pandas
-pyyaml==6.0
+pyyaml==6.0.1
     # via
     #   jupyter-events
     #   jupytext
@@ -290,6 +299,10 @@ pyzmq==25.1.0
     #   ipykernel
     #   jupyter-client
     #   jupyter-server
+referencing==0.30.0
+    # via
+    #   jsonschema
+    #   jsonschema-specifications
 requests==2.31.0
     # via
     #   jupyterlab-server
@@ -302,11 +315,15 @@ rfc3986-validator==0.1.1
     # via
     #   jsonschema
     #   jupyter-events
-scikit-learn==1.2.2
+rpds-py==0.9.2
+    # via
+    #   jsonschema
+    #   referencing
+scikit-learn==1.3.0
     # via
     #   summaries
     #   torch-geometric
-scipy==1.10.1
+scipy==1.11.1
     # via
     #   scikit-learn
     #   summaries
@@ -323,7 +340,7 @@ six==1.16.0
     #   rfc3339-validator
 sniffio==1.3.0
     # via anyio
-snippets @ git+https://github.com/tillahoffmann/snippets.git@3d0e2059bd634be709739879046fa751c8862bd6
+snippets @ git+https://github.com/tillahoffmann/snippets.git@909a37f
     # via -r requirements.in
 soupsieve==2.4.1
     # via beautifulsoup4
@@ -335,7 +352,7 @@ terminado==0.17.1
     # via
     #   jupyter-server
     #   jupyter-server-terminals
-threadpoolctl==3.1.0
+threadpoolctl==3.2.0
     # via scikit-learn
 tinycss2==1.2.1
     # via nbconvert
@@ -346,6 +363,7 @@ tomli==2.0.1
     #   build
     #   coverage
     #   jupyterlab
+    #   pip-tools
     #   pyproject-hooks
     #   pytest
 torch==2.0.1
@@ -364,6 +382,7 @@ tornado==6.3.2
 tqdm==4.65.0
     # via
     #   -r requirements.in
+    #   cmdstanpy
     #   torch-geometric
 traitlets==5.9.0
     # via
@@ -379,7 +398,7 @@ traitlets==5.9.0
     #   nbclient
     #   nbconvert
     #   nbformat
-typing-extensions==4.6.3
+typing-extensions==4.7.1
     # via
     #   async-lru
     #   torch

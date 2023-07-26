@@ -31,18 +31,19 @@ def __main__(argv: List[str] | None = None) -> None:
         mdn: nn.Module = pickle.load(fp)["transformer"]
 
     with args.observed.open("rb") as fp:
-        observed = pickle.load(fp)["data"]
+        observed = pickle.load(fp)
+        observed_data = observed["data"]
 
     if args.loader == "raw":
-        observed = as_tensor(observed, dtype=get_default_dtype())
+        observed_data = as_tensor(observed_data, dtype=get_default_dtype())
     elif args.loader == "tree":
-        datasets = predecessors_to_datasets(observed)
-        observed, = torch_geometric.loader.DataLoader(datasets, batch_size=len(datasets))
+        datasets = predecessors_to_datasets(observed_data)
+        observed_data, = torch_geometric.loader.DataLoader(datasets, batch_size=len(datasets))
     else:
         raise NotImplementedError(args.loader)
 
     with no_grad():
-        posterior: Distribution = mdn(observed)
+        posterior: Distribution = mdn(observed_data)
 
     # This will have shape `(n_samples, batch_size, n_params)`, but the other samplers return
     # `(batch_size, n_samples, n_params)`. Let's move the axis.
@@ -52,6 +53,7 @@ def __main__(argv: List[str] | None = None) -> None:
         pickle.dump({
             "args": vars(args),
             "samples": samples,
+            "params": observed["params"]
         }, fp)
 
 

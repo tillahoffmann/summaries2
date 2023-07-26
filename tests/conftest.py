@@ -51,11 +51,12 @@ class shared:
         import pickle
         with open("{path}", "rb") as fp:
             pickle.load(fp)
+        print("success")
         """
         process = subprocess.Popen(["python", "-"], stdin=subprocess.PIPE, text=True,
-                                   stderr=subprocess.PIPE)
-        _, stderr = process.communicate(dedent(code))
-        if process.returncode:
+                                   stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+        stdout, stderr = process.communicate(dedent(code))
+        if process.returncode or stdout.strip() != "success":
             raise RuntimeError(f"'{path}' cannot be unpickled: \n{stderr}")
 
 
