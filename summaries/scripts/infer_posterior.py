@@ -49,6 +49,18 @@ class InferenceConfig:
         return self.args.n_samples or self.N_SAMPLES
 
 
+class PriorConfig(InferenceConfig):
+    N_SAMPLES = 1_000
+
+    def create_transformer(self, observed_data: Any | None = None) -> Transformer:
+        return FunctionTransformer(self._evaluate_random_features)
+
+    def _evaluate_random_features(self, X: np.ndarray) -> np.ndarray:
+        # Whatever randomness we have here really doesn't matter because we use these features to
+        # pick anything from the reference table. We fix a seed for reproducibility.
+        return np.random.RandomState(0).normal(0, 1, (X.shape[0], 1))
+
+
 class CoalescentConfig(InferenceConfig):
     N_SAMPLES = 1_000
 
@@ -150,6 +162,7 @@ INFERENCE_CONFIGS = [
     CoalescentNeuralConfig,
     TreeKernelExpertSummaryConfig,
     TreeKernelNeuralConfig,
+    PriorConfig,
 ]
 INFERENCE_CONFIGS = {config.__name__: config for config in INFERENCE_CONFIGS}
 

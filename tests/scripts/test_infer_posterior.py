@@ -7,7 +7,8 @@ import pytest
 from sklearn.linear_model import LinearRegression
 from summaries.experiments.benchmark import BenchmarkPosteriorMixtureDensityTransformer
 from summaries.experiments.tree import TreePosteriorMixtureDensityTransformer
-from summaries.scripts.infer_posterior import __main__, INFERENCE_CONFIGS, InferenceConfig
+from summaries.scripts.infer_posterior import __main__, INFERENCE_CONFIGS, InferenceConfig, \
+    PriorConfig
 from summaries.scripts.preprocess_coalescent import __main__ as __main__preprocess_coalescent
 from summaries.scripts.simulate_data import __main__ as __main__simulate_data
 from summaries.transformers import as_transformer, MinimumConditionalEntropyTransformer, \
@@ -27,8 +28,6 @@ class DummyPreprocessor:
 
 
 class DummyConfig(InferenceConfig):
-    N_SAMPLES = 11
-
     def create_preprocessor(self) -> Transformer | None:
         return DummyPreprocessor()
 
@@ -42,10 +41,11 @@ class DummyMinimumConditionalEntropyConfig(DummyConfig):
     IS_DATA_DEPENDENT = True
 
     def create_transformer(self, observed_data: Any | None = None) -> Transformer:
-        return MinimumConditionalEntropyTransformer(observed_data, n_samples=self.N_SAMPLES)
+        return MinimumConditionalEntropyTransformer(observed_data, n_samples=self.n_samples)
 
 
-@pytest.mark.parametrize("config", [DummyPredictorConfig, DummyMinimumConditionalEntropyConfig])
+@pytest.mark.parametrize("config", [DummyPredictorConfig, DummyMinimumConditionalEntropyConfig,
+                                    PriorConfig])
 def test_infer(simulated_data: np.ndarray, simulated_params: np.ndarray, observed_data: np.ndarray,
                latent_params: np.ndarray, tmp_path: Path, config: Type[DummyConfig]) -> None:
     # Create paths and write the data to disk.
@@ -66,7 +66,7 @@ def test_infer(simulated_data: np.ndarray, simulated_params: np.ndarray, observe
         }, fp)
 
     with mock.patch.dict(INFERENCE_CONFIGS, test=config):
-        __main__(map(str, ["test", simulated_path, observed_path, output_path]))
+        __main__(map(str, ["test", "--n-samples=11", simulated_path, observed_path, output_path]))
 
     with output_path.open("rb") as fp:
         output = pickle.load(fp)
@@ -77,7 +77,8 @@ def test_infer(simulated_data: np.ndarray, simulated_params: np.ndarray, observe
     pytest.shared.assert_pickle_loadable(output_path)
 
 
-@pytest.mark.parametrize("config", [x for x in INFERENCE_CONFIGS if x.startswith("Coalescent")])
+@pytest.mark.parametrize("config", [x for x in INFERENCE_CONFIGS if x.startswith("Coalescent")
+                                    or x == "PriorConfig"])
 def test_coalescent_infer(config: str, tmp_path: Path) -> None:
     # Split up the data to test and training sets.
     coaloracle = Path(__file__).parent.parent / "data/coaloracle_sample.csv"
@@ -107,7 +108,8 @@ def test_coalescent_infer(config: str, tmp_path: Path) -> None:
     pytest.shared.assert_pickle_loadable(output_path)
 
 
-@pytest.mark.parametrize("config", [x for x in INFERENCE_CONFIGS if x.startswith("Tree")])
+@pytest.mark.parametrize("config", [x for x in INFERENCE_CONFIGS if x.startswith("Tree")
+                                    or x == "PriorConfig"])
 def test_tree_infer(config: str, tmp_path: Path) -> None:
     # Generate some data.
     simulated_path = tmp_path / "simulated.pkl"
@@ -141,7 +143,8 @@ def test_tree_infer(config: str, tmp_path: Path) -> None:
     pytest.shared.assert_pickle_loadable(output_path)
 
 
-@pytest.mark.parametrize("config", [x for x in INFERENCE_CONFIGS if x.startswith("Benchmark")])
+@pytest.mark.parametrize("config", [x for x in INFERENCE_CONFIGS if x.startswith("Benchmark")
+                                    or x == "PriorConfig"])
 def test_benchmark_infer(config: str, tmp_path: Path) -> None:
     # Generate some data.
     simulated_path = tmp_path / "simulated.pkl"
