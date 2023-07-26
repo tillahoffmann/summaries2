@@ -150,7 +150,11 @@ def create_coalescent_tasks() -> Dict[str, Path]:
         ),
         "PriorConfig": infer_posterior("coalescent", splits, "PriorConfig")
     }
-    return sample_targets
+    return {
+        "samples": sample_targets,
+        "experiment": "coalescent",
+        "transformers": transformers,
+    }
 
 
 def simulate_tree_data(experiment: str, n_observations: int) -> Dict[str, Path]:
@@ -224,6 +228,7 @@ def create_tree_tasks(experiment: str, n_observations: int) -> None:
         "splits": splits,
         "transformers": transformers,
         "samples": samples,
+        "experiment": experiment,
     }
 
 
@@ -273,19 +278,21 @@ def create_benchmark_tasks(experiment: str, n_observations: int) -> None:
     # Add the Stan likelihood-based sampler.
     target = ROOT / experiment / "samples" / "BenchmarkStanConfig.pkl"
     action = ["python", "-m", "summaries.scripts.infer_benchmark", splits["test"], target]
-    samples["BenchmarkStanConfig"] = create_task(
+    create_task(
         f"{experiment}:infer:stan", dependencies=[splits["test"]], targets=[target],
         action=action
     )
+    samples["BenchmarkStanConfig"] = target
 
     return {
         "splits": splits,
         "transformers": transformers,
         "samples": samples,
+        "experiment": experiment,
     }
 
 
-create_coalescent_tasks()
+coalescent_tasks = create_coalescent_tasks()
 benchmark_tasks_small = create_benchmark_tasks("benchmark-small", 10)
 benchmark_tasks_large = create_benchmark_tasks("benchmark-large", 100)
 tree_tasks_small = create_tree_tasks("tree-small", 100)
@@ -293,9 +300,20 @@ tree_tasks_large = create_tree_tasks("tree-large", 748)
 
 # Create the transfer learning tasks: using the networks trained on smaller datasets for inference
 # on the larger ones.
-infer_posterior("tree-large", tree_tasks_large["splits"], "TreeKernelNeuralConfig",
-                tree_tasks_small["transformers"]["TreeMixtureDensityConfig"],
-                suffix="TreeMixtureDensityConfig-small")
-infer_posterior("benchmark-large", benchmark_tasks_large["splits"], "BenchmarkNeuralConfig",
-                benchmark_tasks_small["transformers"]["BenchmarkMixtureDensityConfig"],
-                suffix="BenchmarkMixtureDensityConfig-small")
+tree_tasks_large["samples"]["TreeKernelNeuralConfig-TreeMixtureDensityConfig-small"] = \
+    infer_posterior("tree-large", tree_tasks_large["splits"], "TreeKernelNeuralConfig",
+                    tree_tasks_small["transformers"]["TreeMixtureDensityConfig"],
+                    suffix="TreeMixtureDensityConfig-small")
+benchmark_tasks_large["samples"]["BenchmarkNeuralConfig-BenchmarkMixtureDensityConfig-small"] = \
+    infer_posterior("benchmark-large", benchmark_tasks_large["splits"], "BenchmarkNeuralConfig",
+                    benchmark_tasks_small["transformers"]["BenchmarkMixtureDensityConfig"],
+                    suffix="BenchmarkMixtureDensityConfig-small")
+
+# Add evaluation for each batch of tasks.
+for tasks in [coalescent_tasks, benchmark_tasks_large, benchmark_tasks_small, tree_tasks_large,
+              tree_tasks_small]:
+    experiment = tasks["experiment"]
+    target = ROOT / experiment / "evaluation.csv"
+    paths = list(tasks["samples"].values())
+    action = f"python -m summaries.scripts.evaluate --csv={target} {' '.join(map(str, paths))}"
+    create_task(f"{experiment}:evaluation", targets=[target], action=action, dependencies=paths)
