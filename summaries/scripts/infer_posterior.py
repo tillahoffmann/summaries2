@@ -57,8 +57,8 @@ class PriorConfig(InferenceConfig):
 
     def _evaluate_random_features(self, X: np.ndarray) -> np.ndarray:
         # Whatever randomness we have here really doesn't matter because we use these features to
-        # pick anything from the reference table. We fix a seed for reproducibility.
-        return np.random.RandomState(0).normal(0, 1, (X.shape[0], 1))
+        # pick anything from the reference table.
+        return np.random.normal(0, 1, (X.shape[0], 1))
 
 
 class CoalescentConfig(InferenceConfig):
