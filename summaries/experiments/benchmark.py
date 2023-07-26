@@ -7,15 +7,25 @@ from ..transformers import NeuralTransformer
 
 
 def simulate_benchmark(params: np.ndarray, n_observations: int,
-                       random_state: np.random.RandomState | None = None) -> np.ndarray:
+                       random_state: np.random.RandomState | None = None,
+                       n_noise_features: int = 1) -> np.ndarray:
     """
     Simulate benchmark data.
+
+    Args:
+        params: Univariate parameter to infer.
+        n_observations: Number of independent observations.
+        random_state: Random number generator state.
+        n_noise_features: Number of white noise features per independent observation.
     """
     random_state = random_state or np.random
     u = np.tanh(params)
     data = random_state.normal(u, np.sqrt(1 - u ** 2), (*params.shape[:-1], n_observations))
     data *= 2 * random_state.binomial(1, 0.5, data.shape) - 1
-    return data[..., None]
+    return np.concatenate([
+        data[..., None],
+        random_state.normal(0, 1, data.shape + (n_noise_features,))
+    ], axis=-1)
 
 
 class _BenchmarkTransformer(NeuralTransformer):

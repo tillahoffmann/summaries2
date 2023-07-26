@@ -91,10 +91,15 @@ class BenchmarkConfig(InferenceConfig):
         return FunctionTransformer(self._evaluate_summaries)
 
     def _evaluate_summaries(self, observed_data: np.ndarray) -> np.ndarray:
-        # The dataset has shape (n_examples, n_observations, 1), and we evaluate the first few
-        # moments to get (n_examples, n_moments) as candidate summaries.
+        # The dataset has shape (n_examples, n_observations, 1 + n_noise_features), and we evaluate
+        # the first few moments to get (n_examples, (1 + n_noise_features) * n_moments) as candidate
+        # summaries.
         assert observed_data.ndim == 3
-        return np.mean(observed_data ** (2 * np.arange(1, 4)), axis=-2)
+        n_examples, n_observations, n_features = observed_data.shape
+        n_moments = 3
+        expanded = observed_data[..., None] ** (2 * (1 + np.arange(n_moments)))
+        assert expanded.shape == (n_examples, n_observations, n_features, n_moments)
+        return expanded.mean(axis=1).reshape((n_examples, n_features * n_moments))
 
 
 class BenchmarkMinimumConditionalEntropyConfig(BenchmarkConfig):

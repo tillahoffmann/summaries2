@@ -35,8 +35,11 @@ def __main__(argv: List[str] | None = None) -> None:
 
     samples = []
     for i, x in enumerate(tqdm(observed["data"].squeeze())):
-        fit = model.sample({"x": x, "n_observations": x.size, "variance_offset": 1}, chains=chains,
-                           iter_sampling=args.n_samples, show_progress=False, adapt_delta=0.99)
+        # Drop all but the first column (the rest contains white noise).
+        fit = model.sample(
+            {"x": x[:, 0], "n_observations": x.shape[0], "variance_offset": 1}, chains=chains,
+            iter_sampling=args.n_samples, show_progress=False, adapt_delta=0.99,
+        )
         diagnosis = fit.diagnose()
         if "no problems detected" not in diagnosis:
             print(f"Problems detected for sample with index {i}:\n{diagnosis}")

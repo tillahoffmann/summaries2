@@ -18,4 +18,4 @@ def test_simulate_data(config: str, tmp_path: Path) -> None:
 
     if config == "BenchmarkSimulationConfig":
         assert result["params"].shape == (13, 1)
-        assert result["data"].shape == (13, 17, 1)
+        assert result["data"].shape == (13, 17, 2)
