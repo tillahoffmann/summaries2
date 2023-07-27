@@ -272,7 +272,13 @@ def create_benchmark_tasks(experiment: str, n_observations: int) -> None:
         config: infer_posterior(experiment, splits, config) for config in
         INFERENCE_CONFIGS if config.startswith("Benchmark") and config != "BenchmarkNeuralConfig"
     } | {
-        "PriorConfig": infer_posterior(experiment, splits, "PriorConfig")
+        "PriorConfig": infer_posterior(experiment, splits, "PriorConfig"),
+        "BenchmarkMixtureDensityConfig": infer_mdn_posterior(
+            experiment, splits, transformers["BenchmarkMixtureDensityConfig"]
+        ),
+        "BenchmarkMixtureDensityConfigReduced": infer_mdn_posterior(
+            experiment, splits, transformers["BenchmarkMixtureDensityConfigReduced"]
+        ),
     }
 
     # Add the Stan likelihood-based sampler.
