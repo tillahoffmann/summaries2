@@ -163,8 +163,9 @@ def create_coalescent_tasks() -> Dict[str, Path]:
 
     transformers = train_coalescent_transformers(splits)
     sample_targets = {
-        config: infer_posterior("coalescent", splits, "CoalescentNeuralConfig", transformer) for
-        config, transformer in transformers.items()
+        f"CoalescentNeuralConfig-{config}":
+            infer_posterior("coalescent", splits, "CoalescentNeuralConfig", transformer) for
+            config, transformer in transformers.items()
     } | {
         config: infer_posterior("coalescent", splits, config) for config in INFERENCE_CONFIGS if
         config.startswith("Coalescent") and config != "CoalescentNeuralConfig"
@@ -238,8 +239,9 @@ def create_tree_tasks(experiment: str, n_observations: int) -> None:
     splits = simulate_tree_data(experiment, n_observations)
     transformers = train_tree_transformers(experiment, splits)
     samples = {
-        config: infer_posterior(experiment, splits, "TreeKernelNeuralConfig", transformer) for
-        config, transformer in transformers.items()
+        f"TreeKernelNeuralConfig-{config}":
+            infer_posterior(experiment, splits, "TreeKernelNeuralConfig", transformer) for
+            config, transformer in transformers.items()
     } | {
         "TreeKernelHistorySamplerConfig":
             infer_tree_posterior_with_history_sampler(experiment, splits),
@@ -290,8 +292,9 @@ def create_benchmark_tasks(experiment: str, n_observations: int) -> None:
     splits = simulate_benchmark_data(experiment, n_observations)
     transformers = train_benchmark_transformers(experiment, splits)
     samples = {
-        config: infer_posterior(experiment, splits, "BenchmarkNeuralConfig",
-                                transformer) for config, transformer in transformers.items()
+        f"BenchmarkNeuralConfig-{config}":
+            infer_posterior(experiment, splits, "BenchmarkNeuralConfig", transformer) for
+            config, transformer in transformers.items()
     } | {
         config: infer_posterior(experiment, splits, config) for config in
         INFERENCE_CONFIGS if config.startswith("Benchmark") and config != "BenchmarkNeuralConfig"
