@@ -246,6 +246,9 @@ def create_tree_tasks(experiment: str, n_observations: int) -> None:
         "TreeKernelHistorySamplerConfig":
             infer_tree_posterior_with_history_sampler(experiment, splits),
         "PriorConfig": infer_posterior(experiment, splits, "PriorConfig"),
+        "TreeMixtureDensityConfig": infer_mdn_posterior(
+                experiment, splits, transformers["TreeMixtureDensityConfig"], loader="tree",
+            ),
     } | {
         config: infer_posterior(experiment, splits, config) for config in INFERENCE_CONFIGS if
         config.startswith("Tree") and config != "TreeKernelNeuralConfig"
