@@ -11,7 +11,8 @@ from typing import Dict
 create_task("requirements", action="pip-compile -v", targets=["requirements.txt"],
             dependencies=["requirements.in", "setup.py"])
 
-create_task("tests", action="pytest -v --cov=summaries --cov-report=html --cov-fail-under=100")
+create_task("tests", action="pytest -v --cov=summaries --cov-report=html --cov-report=term-missing "
+            "--cov-fail-under=100")
 
 
 ROOT = Path("workspace")
