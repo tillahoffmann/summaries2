@@ -5,6 +5,7 @@ from sklearn.linear_model import LinearRegression
 from summaries.transformers import as_transformer, MinimumConditionalEntropyTransformer, \
     NeuralTransformer
 from summaries.transformers.base import _DataDependentTransformerMixin, Transformer
+import torch
 from torch.nn import Identity
 from typing import Dict, Type
 
@@ -53,3 +54,22 @@ def test_transformer(transformer_cls: Type[Transformer], kwargs: Dict, simulated
 def test_data_dependent_transformer_invalid_shape() -> None:
     with pytest.raises(ValueError, match="must be a vector"):
         MinimumConditionalEntropyTransformer(np.zeros((3, 2)), frac=0.1)
+
+
+def test_neural_transformer_batch() -> None:
+    class _Identity(Identity):
+        def __init__(self):
+            super().__init__()
+            self.n_calls = 0
+
+        def forward(self, *args, **kwargs):
+            self.n_calls += 1
+            return super().forward(*args, **kwargs)
+
+    identity = _Identity()
+    transformer = NeuralTransformer(identity, batch_size=10, data_as_tensor=False)
+    transformer.transform(torch.randn(27, 3))
+    assert identity.n_calls == 3
+
+    with pytest.raises(TypeError, match="must be a tensor"):
+        transformer.transform(None)
