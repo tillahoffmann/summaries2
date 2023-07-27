@@ -85,6 +85,11 @@ class CoalescentNeuralConfig(CoalescentConfig):
             return pickle.load(fp)["transformer"]
 
 
+class CoalescentStandardConfig(CoalescentConfig):
+    def create_transformer(self, observed_data: Any | None = None) -> Transformer:
+        return FunctionTransformer()
+
+
 class BenchmarkConfig(InferenceConfig):
     N_SAMPLES = 1_000
 
@@ -174,6 +179,7 @@ INFERENCE_CONFIGS = [
     CoalescentLinearPosteriorMeanConfig,
     CoalescentMinimumConditionalEntropyConfig,
     CoalescentNeuralConfig,
+    CoalescentStandardConfig,
     TreeKernelExpertSummaryConfig,
     TreeKernelNeuralConfig,
     PriorConfig,
