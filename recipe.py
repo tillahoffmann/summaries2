@@ -1,8 +1,10 @@
-from cook import create_task
+from cook import create_task, Task
 import json
 from pathlib import Path
+import shutil
 from summaries.scripts.infer_posterior import INFERENCE_CONFIGS
 from summaries.scripts.train_transformer import TRAIN_CONFIGS
+from summaries.util import load_pickle
 from typing import Dict
 
 
@@ -16,6 +18,8 @@ ROOT = Path("workspace")
 BENCHMARK_ROOT = ROOT / "benchmark"
 COALESCENT_ROOT = ROOT / "coalescent"
 TREE_ROOT = ROOT / "tree"
+# Random number generator seeds generated, at some point, by np.random.randint(10_000).
+SEEDS = [6389, 9074, 7627]
 
 
 def prepare_coalescent_data() -> Dict[str, Path]:
@@ -43,9 +47,17 @@ def prepare_coalescent_data() -> Dict[str, Path]:
     return split_targets
 
 
+def _pick_best_transformer(task: Task) -> None:
+    # Find the best one and copy it; a symlink would be nice but that breaks all sorts of stuff,
+    # e.g., evaluating digests.
+    best = min(task.dependencies, key=lambda path: load_pickle(path)["last_validation_loss"])
+    shutil.copy(best.name, task.targets[0])
+
+
 def train_transformer(experiment: str, splits: Dict[str, Path], config: str) -> Path:
     """
-    Train a single transformer.
+    Train a single transformer multiple times using different seeds. We create a symlink to the
+    "best" transformer as evaluated by the last validation loss of the training run.
 
     Args:
         experiment: Parent folder of the experiment.
@@ -56,12 +68,23 @@ def train_transformer(experiment: str, splits: Dict[str, Path], config: str) -> 
         Path to trained transformer.
     """
     dependencies = [splits["train"], splits["validation"]]
-    transformer_target = ROOT / f"{experiment}/transformers/{config}.pkl"
+    name = f"{experiment}:train:{config}"
 
-    action = ["python", "-m", "summaries.scripts.train_transformer", config, *dependencies,
-              transformer_target]
-    create_task(f"{experiment}:train:{config}", dependencies=dependencies, action=action,
-                targets=[transformer_target])
+    # Train a bunch of transformers with different seeds.
+    transformer_targets = []
+    for seed in SEEDS:
+        transformer_target = ROOT / f"{experiment}/transformers/{config}-{seed}.pkl"
+        action = ["python", "-m", "summaries.scripts.train_transformer", f"--seed={seed}", config,
+                  *dependencies, transformer_target]
+        create_task(f"{name}-{seed}", dependencies=dependencies, action=action,
+                    targets=[transformer_target])
+        transformer_targets.append(transformer_target)
+
+    # Pick the best one using the validation loss.
+    transformer_target = ROOT / f"{experiment}/transformers/{config}.pkl"
+    create_task(name, action=_pick_best_transformer, targets=[transformer_target],
+                dependencies=transformer_targets)
+
     return transformer_target
 
 

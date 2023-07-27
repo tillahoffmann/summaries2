@@ -19,7 +19,7 @@ def test_train_transformer_benchmark(config: str, tmp_path: Path) -> None:
                                str(path)])
 
     output_path = tmp_path / "output.pkl"
-    argv = [config, tmp_path / "train.pkl", tmp_path / "validation.pkl", output_path]
+    argv = ["--seed=0", config, tmp_path / "train.pkl", tmp_path / "validation.pkl", output_path]
 
     with mock.patch.object(TRAIN_CONFIGS[config], "MAX_EPOCHS", 2):
         __main__(map(str, argv))
