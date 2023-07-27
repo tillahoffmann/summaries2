@@ -241,6 +241,7 @@ def __main__(argv: Optional[List[str]] = None) -> None:
             "start": start,
             "end": datetime.now(),
             "transformer": transformer,
+            "last_validation_loss": validation_loss,
         }, fp)
 
 

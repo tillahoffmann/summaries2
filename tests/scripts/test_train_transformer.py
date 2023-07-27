@@ -29,6 +29,7 @@ def test_train_transformer_benchmark(config: str, tmp_path: Path) -> None:
         result = pickle.load(fp)
 
     assert isinstance(result["transformer"], nn.Module)
+    assert np.isscalar(result["last_validation_loss"])
 
 
 @pytest.mark.parametrize("config", [x for x in TRAIN_CONFIGS if x.startswith("Coalescent")])
@@ -47,6 +48,7 @@ def test_train_transformer_coalescent(config: str, tmp_path: Path) -> None:
         result = pickle.load(fp)
 
     assert isinstance(result["transformer"], nn.Module)
+    assert np.isscalar(result["last_validation_loss"])
 
 
 @pytest.mark.parametrize("config", [x for x in TRAIN_CONFIGS if x.startswith("Tree")])
@@ -69,6 +71,7 @@ def test_train_transformer_tree(config: str, tmp_path: Path) -> None:
         result = pickle.load(fp)
 
     assert isinstance(result["transformer"], nn.Module)
+    assert np.isscalar(result["last_validation_loss"])
 
 
 # Outside the test function to support pickling in tests.
