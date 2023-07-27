@@ -32,11 +32,15 @@ class NeuralTransformer(Module, BaseEstimator):
     def transform(self, data: Any) -> torch.Tensor:
         if self.data_as_tensor:
             data = torch.as_tensor(data, dtype=torch.get_default_dtype())
-        if self.batch_size is None:
+
+        # TODO: this should just be self.batch_size but some of the older trained models don't have
+        # said attribute, and retraining would take a while.
+        batch_size = getattr(self, "batch_size", None)
+        if batch_size is None:
             return self.transformer(data)
 
         # We need tensor input for batched transforms.
         if not torch.is_tensor(data):
             raise TypeError(f"data must be a tensor for batched transformations; got {type(data)}")
-        loader = TensorDataLoader(TensorDataset(data), batch_size=self.batch_size, shuffle=False)
+        loader = TensorDataLoader(TensorDataset(data), batch_size=batch_size, shuffle=False)
         return torch.concatenate([self.transformer(*batch) for batch in loader], axis=0)
