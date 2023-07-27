@@ -51,7 +51,7 @@ def _pick_best_transformer(task: Task) -> None:
     # Find the best one and copy it; a symlink would be nice but that breaks all sorts of stuff,
     # e.g., evaluating digests.
     best = min(task.dependencies, key=lambda path: load_pickle(path)["last_validation_loss"])
-    shutil.copy(best.name, task.targets[0])
+    shutil.copy(best, task.targets[0])
 
 
 def train_transformer(experiment: str, splits: Dict[str, Path], config: str) -> Path:
