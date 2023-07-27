@@ -12,7 +12,7 @@ def test_evaluate(tmp_path: Path) -> None:
         path = tmp_path / f"{offset}.pkl"
         util.dump_pickle({
             "params": reference,
-            "samples": reference[:, None, :] + offset + np.random.normal(0, 1, (1000, 10))
+            "samples": reference[:, None, :] + offset + np.random.normal(0, 1, (100, 1000, 10))
         }, path)
         paths.append(str(path))
 
