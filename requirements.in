@@ -11,6 +11,6 @@ pandas
 pybind11
 pytest
 pytest-cov
-git+https://github.com/tillahoffmann/snippets.git@909a37f
+git+https://github.com/tillahoffmann/snippets.git@0a704b2
 shapely
 tqdm
