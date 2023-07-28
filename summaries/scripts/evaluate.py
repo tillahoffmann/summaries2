@@ -54,6 +54,8 @@ def __main__(argv: List[str] | None = None) -> None:
             "nlp_err": nlp_err,
         })
     statistics = pd.DataFrame(statistics).sort_values("nlp")
+    if args.csv:
+        statistics.to_csv(args.csv, index=False)
 
     for key in ["rmse", "nlp"]:
         sigfigs = args.sigfigs or int(np.ceil(-np.log10(statistics[f"{key}_err"])).max())
@@ -62,9 +64,6 @@ def __main__(argv: List[str] | None = None) -> None:
 
     pd.set_option('display.max_colwidth', None)
     print(statistics)
-
-    if args.csv:
-        statistics.to_csv(args.csv, index=False)
 
 
 if __name__ == "__main__":

@@ -1,21 +1,26 @@
-from cook import create_task
+from cook import create_task, Task
 import json
 from pathlib import Path
+import shutil
 from summaries.scripts.infer_posterior import INFERENCE_CONFIGS
 from summaries.scripts.train_transformer import TRAIN_CONFIGS
+from summaries.util import load_pickle
 from typing import Dict
 
 
 create_task("requirements", action="pip-compile -v", targets=["requirements.txt"],
             dependencies=["requirements.in", "setup.py"])
 
-create_task("tests", action="pytest -v --cov=summaries --cov-report=html --cov-fail-under=100")
+create_task("tests", action="pytest -v --cov=summaries --cov-report=html --cov-report=term-missing "
+            "--cov-fail-under=100")
 
 
 ROOT = Path("workspace")
 BENCHMARK_ROOT = ROOT / "benchmark"
 COALESCENT_ROOT = ROOT / "coalescent"
 TREE_ROOT = ROOT / "tree"
+# Random number generator seeds generated, at some point, by np.random.randint(10_000).
+SEEDS = [6389, 9074, 7627]
 
 
 def prepare_coalescent_data() -> Dict[str, Path]:
@@ -43,9 +48,17 @@ def prepare_coalescent_data() -> Dict[str, Path]:
     return split_targets
 
 
+def _pick_best_transformer(task: Task) -> None:
+    # Find the best one and copy it; a symlink would be nice but that breaks all sorts of stuff,
+    # e.g., evaluating digests.
+    best = min(task.dependencies, key=lambda path: load_pickle(path)["last_validation_loss"])
+    shutil.copy(best, task.targets[0])
+
+
 def train_transformer(experiment: str, splits: Dict[str, Path], config: str) -> Path:
     """
-    Train a single transformer.
+    Train a single transformer multiple times using different seeds. We create a symlink to the
+    "best" transformer as evaluated by the last validation loss of the training run.
 
     Args:
         experiment: Parent folder of the experiment.
@@ -56,12 +69,23 @@ def train_transformer(experiment: str, splits: Dict[str, Path], config: str) -> 
         Path to trained transformer.
     """
     dependencies = [splits["train"], splits["validation"]]
-    transformer_target = ROOT / f"{experiment}/transformers/{config}.pkl"
+    name = f"{experiment}:train:{config}"
 
-    action = ["python", "-m", "summaries.scripts.train_transformer", config, *dependencies,
-              transformer_target]
-    create_task(f"{experiment}:train:{config}", dependencies=dependencies, action=action,
-                targets=[transformer_target])
+    # Train a bunch of transformers with different seeds.
+    transformer_targets = []
+    for seed in SEEDS:
+        transformer_target = ROOT / f"{experiment}/transformers/{config}-{seed}.pkl"
+        action = ["python", "-m", "summaries.scripts.train_transformer", f"--seed={seed}", config,
+                  *dependencies, transformer_target]
+        create_task(f"{name}-{seed}", dependencies=dependencies, action=action,
+                    targets=[transformer_target])
+        transformer_targets.append(transformer_target)
+
+    # Pick the best one using the validation loss.
+    transformer_target = ROOT / f"{experiment}/transformers/{config}.pkl"
+    create_task(name, action=_pick_best_transformer, targets=[transformer_target],
+                dependencies=transformer_targets)
+
     return transformer_target
 
 
@@ -139,8 +163,9 @@ def create_coalescent_tasks() -> Dict[str, Path]:
 
     transformers = train_coalescent_transformers(splits)
     sample_targets = {
-        config: infer_posterior("coalescent", splits, "CoalescentNeuralConfig", transformer) for
-        config, transformer in transformers.items()
+        f"CoalescentNeuralConfig-{config}":
+            infer_posterior("coalescent", splits, "CoalescentNeuralConfig", transformer) for
+            config, transformer in transformers.items()
     } | {
         config: infer_posterior("coalescent", splits, config) for config in INFERENCE_CONFIGS if
         config.startswith("Coalescent") and config != "CoalescentNeuralConfig"
@@ -214,12 +239,16 @@ def create_tree_tasks(experiment: str, n_observations: int) -> None:
     splits = simulate_tree_data(experiment, n_observations)
     transformers = train_tree_transformers(experiment, splits)
     samples = {
-        config: infer_posterior(experiment, splits, "TreeKernelNeuralConfig", transformer) for
-        config, transformer in transformers.items()
+        f"TreeKernelNeuralConfig-{config}":
+            infer_posterior(experiment, splits, "TreeKernelNeuralConfig", transformer) for
+            config, transformer in transformers.items()
     } | {
         "TreeKernelHistorySamplerConfig":
             infer_tree_posterior_with_history_sampler(experiment, splits),
         "PriorConfig": infer_posterior(experiment, splits, "PriorConfig"),
+        "TreeMixtureDensityConfig": infer_mdn_posterior(
+                experiment, splits, transformers["TreeMixtureDensityConfig"], loader="tree",
+            ),
     } | {
         config: infer_posterior(experiment, splits, config) for config in INFERENCE_CONFIGS if
         config.startswith("Tree") and config != "TreeKernelNeuralConfig"
@@ -266,13 +295,20 @@ def create_benchmark_tasks(experiment: str, n_observations: int) -> None:
     splits = simulate_benchmark_data(experiment, n_observations)
     transformers = train_benchmark_transformers(experiment, splits)
     samples = {
-        config: infer_posterior(experiment, splits, "BenchmarkNeuralConfig",
-                                transformer) for config, transformer in transformers.items()
+        f"BenchmarkNeuralConfig-{config}":
+            infer_posterior(experiment, splits, "BenchmarkNeuralConfig", transformer) for
+            config, transformer in transformers.items()
     } | {
         config: infer_posterior(experiment, splits, config) for config in
         INFERENCE_CONFIGS if config.startswith("Benchmark") and config != "BenchmarkNeuralConfig"
     } | {
-        "PriorConfig": infer_posterior(experiment, splits, "PriorConfig")
+        "PriorConfig": infer_posterior(experiment, splits, "PriorConfig"),
+        "BenchmarkMixtureDensityConfig": infer_mdn_posterior(
+            experiment, splits, transformers["BenchmarkMixtureDensityConfig"]
+        ),
+        "BenchmarkMixtureDensityConfigReduced": infer_mdn_posterior(
+            experiment, splits, transformers["BenchmarkMixtureDensityConfigReduced"]
+        ),
     }
 
     # Add the Stan likelihood-based sampler.

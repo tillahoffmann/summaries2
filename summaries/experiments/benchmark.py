@@ -56,8 +56,6 @@ class BenchmarkPosteriorMeanTransformer(_BenchmarkTransformer):
             nn.Tanh(),
             nn.LazyLinear(16),
             nn.Tanh(),
-            nn.LazyLinear(16),
-            nn.Tanh(),
             nn.LazyLinear(1),
         )
 
@@ -81,8 +79,8 @@ class BenchmarkPosteriorMixtureDensityTransformer(_BenchmarkTransformer):
             ) for key in ["logits", "locs", "scales"]
         })
 
-    def forward(self, data: torch.Tensor) -> torch.Tensor:
-        transformed = self.transformer(data)
+    def forward(self, data: torch.Tensor, transformed: torch.Tensor | None = None) -> torch.Tensor:
+        transformed = self.transformer(data) if transformed is None else transformed
 
         logits: torch.Tensor = self.mixture_parameters["logits"](transformed)
         mixture_dist = distributions.Categorical(logits=logits)

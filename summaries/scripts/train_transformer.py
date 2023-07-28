@@ -18,7 +18,8 @@ from ..experiments.benchmark import BenchmarkPosteriorMeanTransformer, \
     BenchmarkPosteriorMixtureDensityTransformer
 from ..experiments.coalescent import CoalescentPosteriorMixtureDensityTransformer, \
     CoalescentPosteriorMeanTransformer
-from ..experiments.tree import predecessors_to_datasets, TreePosteriorMixtureDensityTransformer
+from ..experiments.tree import predecessors_to_datasets, TreePosteriorMeanTransformer, \
+    TreePosteriorMixtureDensityTransformer
 from ..nn import NegLogProbLoss
 from .base import resolve_path
 
@@ -29,6 +30,7 @@ class Args:
     train: Path
     validation: Path
     output: Path
+    seed: Optional[int]
 
 
 class TrainConfig:
@@ -128,6 +130,13 @@ class TreeMixtureDensityConfig(TreeTrainConfig):
         return TreePosteriorMixtureDensityTransformer()
 
 
+class TreePosteriorMeanConfig(TreeTrainConfig):
+    LOSS = nn.MSELoss()
+
+    def create_transformer(self):
+        return TreePosteriorMeanTransformer()
+
+
 TRAIN_CONFIGS = [
     BenchmarkPosteriorMeanConfig,
     BenchmarkMixtureDensityConfig,
@@ -135,6 +144,7 @@ TRAIN_CONFIGS = [
     CoalescentMixtureDensityConfig,
     CoalescentPosteriorMeanConfig,
     TreeMixtureDensityConfig,
+    TreePosteriorMeanConfig,
 ]
 TRAIN_CONFIGS = {config.__name__: config for config in TRAIN_CONFIGS}
 
@@ -155,12 +165,16 @@ def __main__(argv: Optional[List[str]] = None) -> None:
     start = datetime.now()
     parser = ArgumentParser("train_transformer")
     parser.add_argument("--device", default="cpu", help="device to train on")
+    parser.add_argument("--seed", type=int, help="random number generator seed")
     parser.add_argument("config", choices=TRAIN_CONFIGS, help="training configuration")
     parser.add_argument("train", type=resolve_path, help="path to training data")
     parser.add_argument("validation", type=resolve_path, help="path to validation data")
     parser.add_argument("output", type=resolve_path, help="path to output file")
     args: Args = parser.parse_args(argv)
 
+    # Set a seed for reproducibility.
+    if args.seed is not None:
+        torch.manual_seed(args.seed)
     config: TrainConfig = TRAIN_CONFIGS[args.config](args)
 
     # Load the data into tensor datasets.
@@ -241,6 +255,7 @@ def __main__(argv: Optional[List[str]] = None) -> None:
             "start": start,
             "end": datetime.now(),
             "transformer": transformer,
+            "last_validation_loss": validation_loss,
         }, fp)
 
 

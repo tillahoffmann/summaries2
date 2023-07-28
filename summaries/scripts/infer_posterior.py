@@ -15,7 +15,8 @@ from typing import Any, Dict, List
 
 from ..algorithm import NearestNeighborAlgorithm
 from ..experiments.tree import evaluate_gini, predecessors_to_datasets
-from ..transformers import as_transformer, MinimumConditionalEntropyTransformer, Transformer
+from ..transformers import as_transformer, MinimumConditionalEntropyTransformer, \
+    NeuralTransformer, Transformer
 from .base import resolve_path
 
 
@@ -84,6 +85,11 @@ class CoalescentNeuralConfig(CoalescentConfig):
             return pickle.load(fp)["transformer"]
 
 
+class CoalescentExpertSummaryConfig(CoalescentConfig):
+    def create_transformer(self, observed_data: Any | None = None) -> Transformer:
+        return FunctionTransformer()
+
+
 class BenchmarkConfig(InferenceConfig):
     N_SAMPLES = 1_000
 
@@ -102,6 +108,11 @@ class BenchmarkConfig(InferenceConfig):
         return expanded.mean(axis=1).reshape((n_examples, n_features * n_moments))
 
 
+class BenchmarkExpertSummaryConfig(BenchmarkConfig):
+    def create_transformer(self, observed_data: Any | None = None) -> Transformer:
+        return FunctionTransformer()
+
+
 class BenchmarkMinimumConditionalEntropyConfig(BenchmarkConfig):
     IS_DATA_DEPENDENT = True
 
@@ -116,9 +127,17 @@ class BenchmarkLinearPosteriorMeanConfig(BenchmarkConfig):
 
 
 class BenchmarkNeuralConfig(BenchmarkConfig):
+    BATCH_SIZE = 1_000
+
     def create_transformer(self, observed_data: Any | None = None) -> Transformer:
         with open(self.args.transformer_kwargs["transformer"], "rb") as fp:
-            return pickle.load(fp)["transformer"]
+            transformer: NeuralTransformer = pickle.load(fp)["transformer"]
+        # Patch the batch size to avoid memory issues when we process the reference table. For the
+        # "large" benchmark dataset we have up to 10^6 (n_examples) * 10^2 (n_observations)
+        # * 10^{1 to 2} (hidden layer representations). That ends up being somewhere between 4 and
+        # 40 Gb of memory at float32 precision.
+        transformer.batch_size = self.BATCH_SIZE
+        return transformer
 
     def create_preprocessor(self) -> None:
         # Overwrite the preprocessor to ensure we pass the raw data to the neural networks.
@@ -162,9 +181,11 @@ INFERENCE_CONFIGS = [
     BenchmarkLinearPosteriorMeanConfig,
     BenchmarkMinimumConditionalEntropyConfig,
     BenchmarkNeuralConfig,
+    BenchmarkExpertSummaryConfig,
     CoalescentLinearPosteriorMeanConfig,
     CoalescentMinimumConditionalEntropyConfig,
     CoalescentNeuralConfig,
+    CoalescentExpertSummaryConfig,
     TreeKernelExpertSummaryConfig,
     TreeKernelNeuralConfig,
     PriorConfig,

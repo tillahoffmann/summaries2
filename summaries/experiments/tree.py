@@ -254,3 +254,27 @@ def predecessors_to_datasets(predecessors: np.ndarray, params: np.ndarray | None
 
         datasets.append(Data(edge_index=edge_index, num_nodes=n_edges + 1, **kwargs))
     return datasets
+
+
+class TreePosteriorMeanTransformer(_TreeTransformer):
+    """
+    Learnable transformer with posterior mean predictive "head".
+    """
+    def __init__(self) -> None:
+        super().__init__()
+        self.predictor = nn.Sequential(
+            nn.Tanh(),
+            nn.LazyLinear(16),
+            nn.Tanh(),
+            nn.LazyLinear(1),
+        )
+
+    def transform(self, data: Data) -> Tensor:
+        # First apply the GNN ...
+        features = torch.ones([data.num_nodes, 1])
+        transformed = self.transformer(features, edge_index=data.edge_index, batch=data.batch)
+        # ... then try to predict the mean.
+        return self.predictor(transformed)
+
+    def forward(self, data: Data) -> torch.Tensor:
+        return self.transform(data)
