@@ -85,7 +85,7 @@ class CoalescentNeuralConfig(CoalescentConfig):
             return pickle.load(fp)["transformer"]
 
 
-class CoalescentStandardConfig(CoalescentConfig):
+class CoalescentExpertSummaryConfig(CoalescentConfig):
     def create_transformer(self, observed_data: Any | None = None) -> Transformer:
         return FunctionTransformer()
 
@@ -106,6 +106,11 @@ class BenchmarkConfig(InferenceConfig):
         expanded = observed_data[..., None] ** (2 * (1 + np.arange(n_moments)))
         assert expanded.shape == (n_examples, n_observations, n_features, n_moments)
         return expanded.mean(axis=1).reshape((n_examples, n_features * n_moments))
+
+
+class BenchmarkExpertSummaryConfig(BenchmarkConfig):
+    def create_transformer(self, observed_data: Any | None = None) -> Transformer:
+        return FunctionTransformer()
 
 
 class BenchmarkMinimumConditionalEntropyConfig(BenchmarkConfig):
@@ -176,10 +181,11 @@ INFERENCE_CONFIGS = [
     BenchmarkLinearPosteriorMeanConfig,
     BenchmarkMinimumConditionalEntropyConfig,
     BenchmarkNeuralConfig,
+    BenchmarkExpertSummaryConfig,
     CoalescentLinearPosteriorMeanConfig,
     CoalescentMinimumConditionalEntropyConfig,
     CoalescentNeuralConfig,
-    CoalescentStandardConfig,
+    CoalescentExpertSummaryConfig,
     TreeKernelExpertSummaryConfig,
     TreeKernelNeuralConfig,
     PriorConfig,
