@@ -56,8 +56,6 @@ class BenchmarkPosteriorMeanTransformer(_BenchmarkTransformer):
             nn.Tanh(),
             nn.LazyLinear(16),
             nn.Tanh(),
-            nn.LazyLinear(16),
-            nn.Tanh(),
             nn.LazyLinear(1),
         )
 
