@@ -18,7 +18,8 @@ from ..experiments.benchmark import BenchmarkPosteriorMeanTransformer, \
     BenchmarkPosteriorMixtureDensityTransformer
 from ..experiments.coalescent import CoalescentPosteriorMixtureDensityTransformer, \
     CoalescentPosteriorMeanTransformer
-from ..experiments.tree import predecessors_to_datasets, TreePosteriorMixtureDensityTransformer
+from ..experiments.tree import predecessors_to_datasets, TreePosteriorMeanTransformer, \
+    TreePosteriorMixtureDensityTransformer
 from ..nn import NegLogProbLoss
 from .base import resolve_path
 
@@ -129,6 +130,13 @@ class TreeMixtureDensityConfig(TreeTrainConfig):
         return TreePosteriorMixtureDensityTransformer()
 
 
+class TreePosteriorMeanConfig(TreeTrainConfig):
+    LOSS = nn.MSELoss()
+
+    def create_transformer(self):
+        return TreePosteriorMeanTransformer()
+
+
 TRAIN_CONFIGS = [
     BenchmarkPosteriorMeanConfig,
     BenchmarkMixtureDensityConfig,
@@ -136,6 +144,7 @@ TRAIN_CONFIGS = [
     CoalescentMixtureDensityConfig,
     CoalescentPosteriorMeanConfig,
     TreeMixtureDensityConfig,
+    TreePosteriorMeanConfig,
 ]
 TRAIN_CONFIGS = {config.__name__: config for config in TRAIN_CONFIGS}
 
