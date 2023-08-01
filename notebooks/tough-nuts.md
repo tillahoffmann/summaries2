@@ -98,7 +98,7 @@ ax.set_xlabel(r'prior mean $a$')
 ax.set_ylabel(r'second moment $t=n^{-1}\sum_{i=1}^n y_i^2$')
 ax.yaxis.set_major_locator(mpl.ticker.MaxNLocator(5))
 cb = fig.colorbar(mappable, location='top', ax=ax)
-cb.set_label('entropy gain\n'r'$\Delta=H\{p(\theta\mid y)\} - H\{p(\theta)\}$')
+cb.set_label('entropy gain\n'r'$\Delta=H\{f(\theta\mid y)\} - H\{\pi(\theta)\}$')
 ax.set_xlim(a[0], a[-1])
 ax.set_ylim(second_moment[0], second_moment[-1])
 
@@ -110,7 +110,7 @@ ax.set_xlabel(r'parameter $\theta$')
 
 mle = 1 / sm0
 ax.axvline(mle, color='k', ls='--')
-ax.text(mle + 0.3, 0.95, r"$\widehat{\left\vert\theta\right\vert}$", 
+ax.text(mle + 0.3, 0.95, r"$\widehat{\vert\theta\vert}$", 
         transform=ax.get_xaxis_transform(), va="top")
 a1, b1 = evaluate_posterior_params(a0, b, n, sm0)
 posterior = stats.gamma(a1, scale=1 / b1)
