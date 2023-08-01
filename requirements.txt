@@ -20,7 +20,7 @@ arrow==1.2.3
     # via isoduration
 asttokens==2.2.1
     # via stack-data
-async-lru==2.0.3
+async-lru==2.0.4
     # via jupyterlab
 attrs==23.1.0
     # via
@@ -36,13 +36,13 @@ bleach==6.0.0
     # via nbconvert
 build==0.10.0
     # via pip-tools
-certifi==2023.5.7
+certifi==2023.7.22
     # via requests
 cffi==1.15.1
     # via argon2-cffi-bindings
 charset-normalizer==3.2.0
     # via requests
-click==8.1.5
+click==8.1.6
     # via pip-tools
 cmdstanpy==1.1.0
     # via -r requirements.in
@@ -52,7 +52,7 @@ comm==0.1.3
     # via ipykernel
 contourpy==1.1.0
     # via matplotlib
-cook-build==0.3.0
+cook-build==0.4.0
     # via -r requirements.in
 coverage[toml]==7.2.7
     # via pytest-cov
@@ -70,15 +70,15 @@ exceptiongroup==1.1.2
     #   pytest
 executing==1.2.0
     # via stack-data
-fastjsonschema==2.17.1
+fastjsonschema==2.18.0
     # via nbformat
 fasttr @ git+https://github.com/gstonge/fasttr.git@787d0d273ecc21843889a5b4ce3c763110595f28
     # via -r requirements.in
 filelock==3.12.2
     # via torch
-flake8==6.0.0
+flake8==6.1.0
     # via -r requirements.in
-fonttools==4.41.0
+fonttools==4.41.1
     # via matplotlib
 fqdn==1.5.1
     # via jsonschema
@@ -89,13 +89,13 @@ idna==3.4
     #   requests
 iniconfig==2.0.0
     # via pytest
-ipykernel==6.24.0
+ipykernel==6.25.0
     # via jupyterlab
 ipython==8.14.0
     # via ipykernel
 isoduration==20.11.0
     # via jsonschema
-jedi==0.18.2
+jedi==0.19.0
     # via ipython
 jinja2==3.1.2
     # via
@@ -132,7 +132,7 @@ jupyter-core==5.3.1
     #   nbclient
     #   nbconvert
     #   nbformat
-jupyter-events==0.6.3
+jupyter-events==0.7.0
     # via jupyter-server
 jupyter-lsp==2.2.0
     # via jupyterlab
@@ -148,9 +148,9 @@ jupyterlab==4.0.3
     # via -r requirements.in
 jupyterlab-pygments==0.2.2
     # via nbconvert
-jupyterlab-server==2.23.0
+jupyterlab-server==2.24.0
     # via jupyterlab
-jupytext==1.14.7
+jupytext==1.15.0
     # via -r requirements.in
 kiwisolver==1.4.4
     # via matplotlib
@@ -180,15 +180,15 @@ mpmath==1.3.0
     # via sympy
 nbclient==0.8.0
     # via nbconvert
-nbconvert==7.7.1
+nbconvert==7.7.3
     # via jupyter-server
-nbformat==5.9.1
+nbformat==5.9.2
     # via
     #   jupyter-server
     #   jupytext
     #   nbclient
     #   nbconvert
-nest-asyncio==1.5.6
+nest-asyncio==1.5.7
     # via ipykernel
 networkx==3.1
     # via
@@ -197,7 +197,7 @@ networkx==3.1
     #   torch
 notebook-shim==0.2.3
     # via jupyterlab
-numpy==1.25.1
+numpy==1.25.2
     # via
     #   cmdstanpy
     #   contourpy
@@ -234,9 +234,9 @@ pickleshare==0.7.5
     # via ipython
 pillow==10.0.0
     # via matplotlib
-pip-tools==7.0.0
+pip-tools==7.1.0
     # via -r requirements.in
-platformdirs==3.9.1
+platformdirs==3.10.0
     # via jupyter-core
 pluggy==1.2.0
     # via pytest
@@ -258,11 +258,11 @@ pybind11==2.11.1
     # via
     #   -r requirements.in
     #   fasttr
-pycodestyle==2.10.0
+pycodestyle==2.11.0
     # via flake8
 pycparser==2.21
     # via cffi
-pyflakes==3.0.1
+pyflakes==3.1.0
     # via flake8
 pygments==2.15.1
     # via
@@ -303,6 +303,7 @@ referencing==0.30.0
     # via
     #   jsonschema
     #   jsonschema-specifications
+    #   jupyter-events
 requests==2.31.0
     # via
     #   jupyterlab-server
@@ -340,7 +341,7 @@ six==1.16.0
     #   rfc3339-validator
 sniffio==1.3.0
     # via anyio
-snippets @ git+https://github.com/tillahoffmann/snippets.git@0a704b2
+snippets @ git+https://github.com/tillahoffmann/snippets.git@e811f91
     # via -r requirements.in
 soupsieve==2.4.1
     # via beautifulsoup4
@@ -406,7 +407,7 @@ tzdata==2023.3
     # via pandas
 uri-template==1.3.0
     # via jsonschema
-urllib3==2.0.3
+urllib3==2.0.4
     # via requests
 wcwidth==0.2.6
     # via prompt-toolkit
@@ -418,7 +419,7 @@ webencodings==0.5.1
     #   tinycss2
 websocket-client==1.6.1
     # via jupyter-server
-wheel==0.40.0
+wheel==0.41.0
     # via pip-tools
 
 # The following packages are considered to be unsafe in a requirements file:
