@@ -3,7 +3,7 @@ import numpy as np
 from scipy.spatial import KDTree
 from sklearn.base import BaseEstimator
 from sklearn.exceptions import NotFittedError
-from sklearn.utils.validation import check_array
+from sklearn.utils.validation import check_array, check_X_y
 from typing import Any, Optional
 
 
@@ -39,6 +39,7 @@ class NearestNeighborAlgorithm(BaseEstimator):
             data: Simulated data or summary statistics used to build the tree.
             params: Dictionary of parameters used to generate the corresponding `data` realization.
         """
+        data, params = check_X_y(data, params, multi_output=True)
         self.tree_ = KDTree(data, **self.kdtree_kwargs)
         self.params_ = params
         return self
