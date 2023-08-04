@@ -14,7 +14,7 @@ from tqdm import tqdm
 from typing import Any, Dict, List
 
 from ..algorithm import NearestNeighborAlgorithm
-from ..experiments.tree import evaluate_gini, predecessors_to_datasets
+from ..experiments.tree import predecessors_to_datasets
 from ..transformers import as_transformer, MinimumConditionalEntropyTransformer, \
     NeuralTransformer, Transformer
 from .base import resolve_path
@@ -150,10 +150,10 @@ class TreeKernelConfig(InferenceConfig):
 
 class TreeKernelExpertSummaryConfig(TreeKernelConfig):
     """
-    Draw samples using "expert" summary statistics designed for growing trees.
+    Draw samples using "expert" summary statistics designed for growing trees after standardizing.
     """
     def create_transformer(self, observed_data: Any | None = None) -> Transformer:
-        return FunctionTransformer(self._evaluate_summaries)
+        return StandardScaler()
 
     def _evaluate_summaries(self, observed_data: np.ndarray) -> np.ndarray:
         summaries = []
@@ -178,14 +178,16 @@ class TreeKernelNeuralConfig(TreeKernelConfig):
 
 
 INFERENCE_CONFIGS = [
+    BenchmarkExpertSummaryConfig,
     BenchmarkLinearPosteriorMeanConfig,
     BenchmarkMinimumConditionalEntropyConfig,
     BenchmarkNeuralConfig,
-    BenchmarkExpertSummaryConfig,
+
+    CoalescentExpertSummaryConfig,
     CoalescentLinearPosteriorMeanConfig,
     CoalescentMinimumConditionalEntropyConfig,
     CoalescentNeuralConfig,
-    CoalescentExpertSummaryConfig,
+
     TreeKernelExpertSummaryConfig,
     TreeKernelNeuralConfig,
     PriorConfig,

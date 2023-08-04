@@ -235,8 +235,24 @@ def train_tree_transformers(experiment: str, splits: Dict[str, Path]) -> Dict[st
     return targets
 
 
+def compute_tree_summaries(experiment: str, splits: Dict[str, Path]) -> Dict[str, Path]:
+    """
+    Precompute summary statistics for inferring the kernel parameter of trees.
+    """
+    data_root = ROOT / experiment / "data"
+
+    summary_paths = {}
+    for split, path in splits.items():
+        target = data_root / f"{split}-summaries.pkl"
+        action = ["python", "-m", "summaries.scripts.compute_tree_summaries", path, target]
+        create_task(f"{experiment}:data:{split}-summaries", targets=[target], action=action)
+        summary_paths[split] = target
+    return summary_paths
+
+
 def create_tree_tasks(experiment: str, n_observations: int) -> None:
     splits = simulate_tree_data(experiment, n_observations)
+    summaries_splits = compute_tree_summaries(experiment, splits)
     transformers = train_tree_transformers(experiment, splits)
     samples = {
         f"TreeKernelNeuralConfig-{config}":
@@ -250,8 +266,8 @@ def create_tree_tasks(experiment: str, n_observations: int) -> None:
                 experiment, splits, transformers["TreeMixtureDensityConfig"], loader="tree",
             ),
     } | {
-        config: infer_posterior(experiment, splits, config) for config in INFERENCE_CONFIGS if
-        config.startswith("Tree") and config != "TreeKernelNeuralConfig"
+        config: infer_posterior(experiment, summaries_splits, config) for config in
+        INFERENCE_CONFIGS if config.startswith("Tree") and config != "TreeKernelNeuralConfig"
     }
     return {
         "splits": splits,

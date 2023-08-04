@@ -1,5 +1,6 @@
 from __future__ import annotations
 from fasttr import HistorySampler
+import networkit as nk
 import networkx as nx
 import numpy as np
 from scipy import integrate, optimize, special, stats
@@ -48,17 +49,26 @@ def compress_tree(tree: nx.DiGraph) -> np.ndarray:
     return edges[idx, 1]
 
 
-def expand_tree(predecessors: np.ndarray) -> nx.DiGraph:
+def expand_tree(predecessors: np.ndarray, use: str = "networkx") -> nx.DiGraph | nk.Graph:
     """
     Expand an array of predecessors to a tree.
 
     Args:
         predecessors: Array of predecessors, starting with the predecessor for node 1.
+        use: Representation to use ('networkx' or 'networkit').
 
     Returns:
         Reconstructed tree.
     """
-    return nx.DiGraph(list(enumerate(predecessors, 1)))
+    if use == "networkx":
+        return nx.DiGraph(list(enumerate(predecessors, 1)))
+    elif use == "networkit":
+        graph = nk.Graph(n=predecessors.size + 1, directed=True)
+        for a, b in list(enumerate(predecessors, 1)):
+            graph.addEdge(a, b)
+        return graph
+    else:
+        raise NotImplementedError(use)
 
 
 class TreeKernelPosterior(BaseEstimator):
