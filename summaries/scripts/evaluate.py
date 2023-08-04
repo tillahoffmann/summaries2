@@ -39,7 +39,9 @@ def __main__(argv: List[str] | None = None) -> None:
         rmse = np.mean(rmses)
         rmse_err = np.std(rmses) * err_factor
 
-        # Evaluate the negative log probability using a kernel density estimator.
+        # Evaluate the negative log probability using a kernel density estimator. gaussian_kde makes
+        # the unconventional choice of using (num_dims, num_samples) shapes. However, it can handle
+        # single samples in `logpdf` so we don't need to apply any additional slicing or transposes.
         nlps = np.squeeze([- stats.gaussian_kde(xs.T).logpdf(x) for x, xs in
                            zip(observed_params, samples)])
         assert nlps.shape == (n_examples,)
