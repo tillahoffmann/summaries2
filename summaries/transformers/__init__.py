@@ -1,8 +1,7 @@
 from __future__ import annotations
 
 from .base import as_transformer, Transformer
-from .exhaustive_subset_selection import MinimumConditionalEntropyTransformer
-from .nn import NeuralTransformer
+from .projection import NeuralTransformer
 
 
 __all__ = [
