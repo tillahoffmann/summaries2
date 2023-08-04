@@ -228,9 +228,11 @@ def __main__(argv: List[str] | None = None) -> None:
     # If there is a preprocessor, we fit it to the simulated data and then apply it to both
     # datasets. Such a preprocessor can evaluate candidate summary statistics, for example.
     if preprocessor := config.create_preprocessor():
-        preprocessor.fit(simulated["data"])
-        simulated["data"] = preprocessor.transform(simulated["data"])
-        observed["data"] = preprocessor.transform(observed["data"])
+        with Timer() as timer:
+            preprocessor.fit(simulated["data"])
+            simulated["data"] = preprocessor.transform(simulated["data"])
+            observed["data"] = preprocessor.transform(observed["data"])
+        print(f"applied preprocessor in {timer.duration:.1f} seconds")
 
     # If the transformer is data-dependent, we have to handle each observation independently. We can
     # process them as a batch otherwise.
