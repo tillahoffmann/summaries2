@@ -59,10 +59,10 @@ def __main__(argv: List[str] | None = None) -> None:
 
         statistics.append({
             "path": path.name,
-            "rmse": rmse,
-            "rmse_err": rmse_err,
             "nlp": nlp,
             "nlp_err": nlp_err,
+            "rmse": rmse,
+            "rmse_err": rmse_err,
         })
     statistics = pd.DataFrame(statistics).sort_values("nlp")
     if args.csv:
