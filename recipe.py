@@ -364,8 +364,14 @@ benchmark_tasks_large["samples"]["BenchmarkNeuralConfig-BenchmarkMixtureDensityC
 # Add evaluation for each batch of tasks.
 for tasks in [coalescent_tasks, benchmark_tasks_large, benchmark_tasks_small, tree_tasks_large,
               tree_tasks_small]:
-    experiment = tasks["experiment"]
+    experiment: str = tasks["experiment"]
     target = ROOT / experiment / "evaluation.csv"
     paths = list(tasks["samples"].values())
-    action = f"python -m summaries.scripts.evaluate --csv={target} {' '.join(map(str, paths))}"
+    bounds = "none"
+    if experiment.startswith("tree"):
+        bounds = "0,2"
+    elif experiment == "coalescent":
+        bounds = "0,10,0,10"
+    action = f"python -m summaries.scripts.evaluate --bounds={bounds} --csv={target} " \
+        + " ".join(map(str, paths))
     create_task(f"{experiment}:evaluation", targets=[target], action=action, dependencies=paths)

@@ -2,19 +2,26 @@ import argparse
 import numpy as np
 import pandas as pd
 from pathlib import Path
-from scipy import stats
+from snippets.stats import GaussianKernelDensity
 from typing import List
 
 from ..util import load_pickle
 
 
 class Args:
+    bounds: np.ndarray | None
+    sigfigs: int
     observed: Path
     results: List[Path]
 
 
+def _parse_bounds(bounds: str) -> np.ndarray:
+    return None if bounds == "none" else np.reshape([float(x) for x in bounds.split(",")], (-1, 2))
+
+
 def __main__(argv: List[str] | None = None) -> None:
     parser = argparse.ArgumentParser()
+    parser.add_argument("--bounds", type=_parse_bounds, help="bounds for kernel density estimation")
     parser.add_argument("--sigfigs", type=int, help="number of significant figures for statistics")
     parser.add_argument("--csv", type=Path, help="path to CSV output file")
     parser.add_argument("results", type=Path, nargs="+", help="path to posterior samples")
@@ -39,11 +46,13 @@ def __main__(argv: List[str] | None = None) -> None:
         rmse = np.mean(rmses)
         rmse_err = np.std(rmses) * err_factor
 
-        # Evaluate the negative log probability using a kernel density estimator. gaussian_kde makes
-        # the unconventional choice of using (num_dims, num_samples) shapes. However, it can handle
-        # single samples in `logpdf` so we don't need to apply any additional slicing or transposes.
-        nlps = np.squeeze([- stats.gaussian_kde(xs.T).logpdf(x) for x, xs in
-                           zip(observed_params, samples)])
+        # Evaluate the negative log probability using a kernel density estimator.
+        nlps = []
+        for x, xs in zip(observed_params, samples):
+            estimator = GaussianKernelDensity(bounds=args.bounds).fit(xs)
+            nlp, = - estimator.score_samples([x])
+            nlps.append(nlp)
+        nlps = np.asarray(nlps)
         assert nlps.shape == (n_examples,)
         nlp = np.mean(nlps)
         nlp_err = np.std(nlps) * err_factor
