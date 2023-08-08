@@ -26,4 +26,4 @@ def test_evaluate(tmp_path: Path, bounds: str | None) -> None:
     __main__([*parts, *paths])
 
     result = pd.read_csv(csv).set_index("path")
-    assert result.loc["0.pkl"].rmse < result.loc["3.pkl"].rmse
+    assert result.loc["0.pkl"].rmise < result.loc["3.pkl"].rmise
