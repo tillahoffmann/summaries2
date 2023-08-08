@@ -1,5 +1,6 @@
 from __future__ import annotations
 from fasttr import HistorySampler
+import networkit as nk
 import networkx as nx
 import numpy as np
 from scipy import integrate, optimize, special, stats
@@ -48,17 +49,26 @@ def compress_tree(tree: nx.DiGraph) -> np.ndarray:
     return edges[idx, 1]
 
 
-def expand_tree(predecessors: np.ndarray) -> nx.DiGraph:
+def expand_tree(predecessors: np.ndarray, use: str = "networkx") -> nx.DiGraph | nk.Graph:
     """
     Expand an array of predecessors to a tree.
 
     Args:
         predecessors: Array of predecessors, starting with the predecessor for node 1.
+        use: Representation to use ('networkx' or 'networkit').
 
     Returns:
         Reconstructed tree.
     """
-    return nx.DiGraph(list(enumerate(predecessors, 1)))
+    if use == "networkx":
+        return nx.DiGraph(list(enumerate(predecessors, 1)))
+    elif use == "networkit":
+        graph = nk.Graph(n=predecessors.size + 1, directed=True)
+        for a, b in list(enumerate(predecessors, 1)):
+            graph.addEdge(a, b)
+        return graph
+    else:
+        raise NotImplementedError(use)
 
 
 class TreeKernelPosterior(BaseEstimator):
@@ -176,10 +186,12 @@ def evaluate_gini(x: np.ndarray) -> float:
     return 1 - 2 / (n - 1) * (n - (1 + np.arange(n)) @ x / x.sum())
 
 
-class _TreeTransformer(NeuralTransformer):
+class TreePosteriorMeanTransformer(NeuralTransformer):
     """
     Learnable transformer for the tree kernel inference problem without the "head" of the network.
     """
+    transformer: SequentialWithKeywords
+
     def __init__(self, depth: int = 2) -> None:
         layers = []
         for _ in range(depth):
@@ -189,12 +201,20 @@ class _TreeTransformer(NeuralTransformer):
                 nn.LazyLinear(8),
                 nn.Tanh(),
             )))
-        layers.extend([nn.LazyLinear(1), nn.Tanh(), MeanPoolByGraph()])
+        layers.extend([nn.LazyLinear(1), MeanPoolByGraph()])
         transformer = SequentialWithKeywords(*layers)
         super().__init__(transformer)
 
+    def transform(self, data: Data) -> Tensor:
+        # First apply the GNN ...
+        features = torch.ones([data.num_nodes, 1])
+        return self.transformer(features, edge_index=data.edge_index, batch=data.batch)
 
-class TreePosteriorMixtureDensityTransformer(_TreeTransformer):
+    def forward(self, data: Data) -> torch.Tensor:
+        return self.transform(data)
+
+
+class TreePosteriorMixtureDensityTransformer(TreePosteriorMeanTransformer):
     """
     Learnable transformer with conditional posterior density estimation "head" based on mixture
     density networks.
@@ -204,15 +224,12 @@ class TreePosteriorMixtureDensityTransformer(_TreeTransformer):
         self.n_components = n_components
         self.mixture_parameters = nn.ModuleDict({
             key: nn.Sequential(
+                nn.Tanh(),
                 nn.LazyLinear(8),
                 nn.Tanh(),
                 nn.LazyLinear(size * n_components),
             ) for (size, key) in [(1, "logits"), (1, "concentration1s"), (1, "concentration0s")]
         })
-
-    def transform(self, data: Data) -> torch.Tensor:
-        features = torch.ones([data.num_nodes, 1])
-        return self.transformer(features, edge_index=data.edge_index, batch=data.batch)
 
     def forward(self, data: Data) -> Tensor:
         transformed = self.transform(data)
@@ -254,27 +271,3 @@ def predecessors_to_datasets(predecessors: np.ndarray, params: np.ndarray | None
 
         datasets.append(Data(edge_index=edge_index, num_nodes=n_edges + 1, **kwargs))
     return datasets
-
-
-class TreePosteriorMeanTransformer(_TreeTransformer):
-    """
-    Learnable transformer with posterior mean predictive "head".
-    """
-    def __init__(self) -> None:
-        super().__init__()
-        self.predictor = nn.Sequential(
-            nn.Tanh(),
-            nn.LazyLinear(16),
-            nn.Tanh(),
-            nn.LazyLinear(1),
-        )
-
-    def transform(self, data: Data) -> Tensor:
-        # First apply the GNN ...
-        features = torch.ones([data.num_nodes, 1])
-        transformed = self.transformer(features, edge_index=data.edge_index, batch=data.batch)
-        # ... then try to predict the mean.
-        return self.predictor(transformed)
-
-    def forward(self, data: Data) -> torch.Tensor:
-        return self.transform(data)

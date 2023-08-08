@@ -4,9 +4,12 @@ import json
 import numpy as np
 from pathlib import Path
 import pickle
+from sklearn.cross_decomposition import PLSRegression
 from sklearn.linear_model import LinearRegression
+from sklearn.model_selection import GridSearchCV
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import FunctionTransformer, StandardScaler
+from snippets.timer import Timer
 from torch import no_grad
 import torch_geometric.data
 import torch_geometric.utils
@@ -14,9 +17,9 @@ from tqdm import tqdm
 from typing import Any, Dict, List
 
 from ..algorithm import NearestNeighborAlgorithm
-from ..experiments.tree import evaluate_gini, predecessors_to_datasets
-from ..transformers import as_transformer, MinimumConditionalEntropyTransformer, \
-    NeuralTransformer, Transformer
+from ..experiments.tree import predecessors_to_datasets
+from ..transformers import ApproximateSufficiencyTransformer, as_transformer, \
+    MinimumConditionalEntropyTransformer, NeuralTransformer, Transformer
 from .base import resolve_path
 
 
@@ -90,11 +93,20 @@ class CoalescentExpertSummaryConfig(CoalescentConfig):
         return FunctionTransformer()
 
 
+class CoalescentPLSConfig(CoalescentConfig):
+    def create_transformer(self, observed_data: Any | None = None) -> Transformer:
+        # Seven expert summaries.
+        return GridSearchCV(PLSRegression(), {"n_components": np.arange(1, 8)})
+
+
 class BenchmarkConfig(InferenceConfig):
     N_SAMPLES = 1_000
 
-    def create_preprocessor(self) -> Transformer | None:
-        return FunctionTransformer(self._evaluate_summaries)
+    def create_preprocessor(self) -> Transformer:
+        return Pipeline([
+            ("candidate_summaries", FunctionTransformer(self._evaluate_summaries)),
+            ("standardize", StandardScaler()),
+        ])
 
     def _evaluate_summaries(self, observed_data: np.ndarray) -> np.ndarray:
         # The dataset has shape (n_examples, n_observations, 1 + n_noise_features), and we evaluate
@@ -121,9 +133,32 @@ class BenchmarkMinimumConditionalEntropyConfig(BenchmarkConfig):
                                                     thin=10)
 
 
+class BenchmarkApproximateSufficiencyConfig(BenchmarkConfig):
+    IS_DATA_DEPENDENT = True
+
+    def create_transformer(self, observed_data: Any | None = None) -> Transformer:
+        return ApproximateSufficiencyTransformer(observed_data, n_samples=self.n_samples,
+                                                 range_=(-3, 3), thin=10)
+
+
+class BenchmarkApproximateSufficiencyLikelihoodRatioConfig(BenchmarkConfig):
+    IS_DATA_DEPENDENT = True
+
+    def create_transformer(self, observed_data: Any | None = None) -> Transformer:
+        return ApproximateSufficiencyTransformer(observed_data, n_samples=self.n_samples, thin=10,
+                                                 likelihood_ratio=True, range_=(-3, 3))
+
+
 class BenchmarkLinearPosteriorMeanConfig(BenchmarkConfig):
     def create_transformer(self, observed_data: Any | None = None) -> Transformer:
         return as_transformer(LinearRegression)()
+
+
+class BenchmarkPLSConfig(BenchmarkExpertSummaryConfig):
+    def create_transformer(self, observed_data: Any | None = None) -> Transformer:
+        # First three moments times two observations (one signal, one noise) for a total of six
+        # features.
+        return GridSearchCV(PLSRegression(), {"n_components": np.arange(1, 7)})
 
 
 class BenchmarkNeuralConfig(BenchmarkConfig):
@@ -150,17 +185,46 @@ class TreeKernelConfig(InferenceConfig):
 
 class TreeKernelExpertSummaryConfig(TreeKernelConfig):
     """
-    Draw samples using "expert" summary statistics designed for growing trees.
+    Draw samples using "expert" summary statistics designed for growing trees after standardizing.
     """
-    def create_transformer(self, observed_data: Any | None = None) -> Transformer:
-        return FunctionTransformer(self._evaluate_summaries)
+    def create_preprocessor(self) -> Transformer:
+        return StandardScaler()
 
-    def _evaluate_summaries(self, observed_data: np.ndarray) -> np.ndarray:
-        summaries = []
-        for predecessors in observed_data:
-            in_degrees = np.bincount(predecessors, minlength=observed_data.shape[-1] + 1)
-            summaries.append((in_degrees.std(), evaluate_gini(in_degrees)))
-        return np.asarray(summaries)
+    def create_transformer(self, observed_data: Any | None = None) -> Transformer:
+        return FunctionTransformer()
+
+
+class TreeKernelLinearPosteriorMeanConfig(TreeKernelExpertSummaryConfig):
+    def create_transformer(self, observed_data: Any | None = None) -> Transformer:
+        return as_transformer(LinearRegression)()
+
+
+class TreeKernelPLSConfig(TreeKernelExpertSummaryConfig):
+    def create_transformer(self, observed_data: Any | None = None) -> Transformer:
+        return GridSearchCV(PLSRegression(), {"n_components": np.arange(1, 6)})
+
+
+class TreeKernelMinimumConditionalEntropyConfig(TreeKernelExpertSummaryConfig):
+    IS_DATA_DEPENDENT = True
+
+    def create_transformer(self, observed_data: Any | None = None) -> Transformer:
+        return MinimumConditionalEntropyTransformer(observed_data, n_samples=self.n_samples)
+
+
+class TreeKernelApproximateSufficiencyConfig(TreeKernelExpertSummaryConfig):
+    IS_DATA_DEPENDENT = True
+
+    def create_transformer(self, observed_data: Any | None = None) -> Transformer:
+        return ApproximateSufficiencyTransformer(observed_data, range_=(0, 2),
+                                                 n_samples=self.n_samples)
+
+
+class TreeKernelApproximateSufficiencyLikelihoodRatioConfig(TreeKernelExpertSummaryConfig):
+    IS_DATA_DEPENDENT = True
+
+    def create_transformer(self, observed_data: Any | None = None) -> Transformer:
+        return ApproximateSufficiencyTransformer(observed_data, range_=(0, 2),
+                                                 n_samples=self.n_samples, likelihood_ratio=True)
 
 
 class TreeKernelNeuralConfig(TreeKernelConfig):
@@ -178,16 +242,28 @@ class TreeKernelNeuralConfig(TreeKernelConfig):
 
 
 INFERENCE_CONFIGS = [
+    BenchmarkApproximateSufficiencyConfig,
+    BenchmarkApproximateSufficiencyLikelihoodRatioConfig,
+    BenchmarkExpertSummaryConfig,
     BenchmarkLinearPosteriorMeanConfig,
     BenchmarkMinimumConditionalEntropyConfig,
     BenchmarkNeuralConfig,
-    BenchmarkExpertSummaryConfig,
+    BenchmarkPLSConfig,
+
+    CoalescentExpertSummaryConfig,
     CoalescentLinearPosteriorMeanConfig,
     CoalescentMinimumConditionalEntropyConfig,
     CoalescentNeuralConfig,
-    CoalescentExpertSummaryConfig,
+    CoalescentPLSConfig,
+
+    TreeKernelApproximateSufficiencyConfig,
+    TreeKernelApproximateSufficiencyLikelihoodRatioConfig,
     TreeKernelExpertSummaryConfig,
+    TreeKernelLinearPosteriorMeanConfig,
+    TreeKernelMinimumConditionalEntropyConfig,
     TreeKernelNeuralConfig,
+    TreeKernelPLSConfig,
+
     PriorConfig,
 ]
 INFERENCE_CONFIGS = {config.__name__: config for config in INFERENCE_CONFIGS}
@@ -226,9 +302,11 @@ def __main__(argv: List[str] | None = None) -> None:
     # If there is a preprocessor, we fit it to the simulated data and then apply it to both
     # datasets. Such a preprocessor can evaluate candidate summary statistics, for example.
     if preprocessor := config.create_preprocessor():
-        preprocessor.fit(simulated["data"])
-        simulated["data"] = preprocessor.transform(simulated["data"])
-        observed["data"] = preprocessor.transform(observed["data"])
+        with Timer() as timer:
+            preprocessor.fit(simulated["data"])
+            simulated["data"] = preprocessor.transform(simulated["data"])
+            observed["data"] = preprocessor.transform(observed["data"])
+        print(f"applied preprocessor in {timer.duration:.1f} seconds")
 
     # If the transformer is data-dependent, we have to handle each observation independently. We can
     # process them as a batch otherwise.

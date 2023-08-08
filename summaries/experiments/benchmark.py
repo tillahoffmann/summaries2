@@ -28,10 +28,12 @@ def simulate_benchmark(params: np.ndarray, n_observations: int,
     ], axis=-1)
 
 
-class _BenchmarkTransformer(NeuralTransformer):
+class BenchmarkPosteriorMeanTransformer(NeuralTransformer):
     """
     Learnable transformer for the coalescent problem without the "head" of the network.
     """
+    transformer: nn.Sequential
+
     def __init__(self) -> None:
         transformer = nn.Sequential(
             nn.LazyLinear(16),
@@ -40,30 +42,14 @@ class _BenchmarkTransformer(NeuralTransformer):
             nn.Tanh(),
             nn.LazyLinear(1),
             MeanPool(),
-            nn.Tanh(),
         )
         super().__init__(transformer)
-
-
-class BenchmarkPosteriorMeanTransformer(_BenchmarkTransformer):
-    """
-    Learnable transformer with posterior mean predictive "head".
-    """
-    def __init__(self) -> None:
-        super().__init__()
-        self.transformer = nn.Sequential(
-            self.transformer,
-            nn.Tanh(),
-            nn.LazyLinear(16),
-            nn.Tanh(),
-            nn.LazyLinear(1),
-        )
 
     def forward(self, data: torch.Tensor) -> torch.Tensor:
         return self.transformer(data)
 
 
-class BenchmarkPosteriorMixtureDensityTransformer(_BenchmarkTransformer):
+class BenchmarkPosteriorMixtureDensityTransformer(BenchmarkPosteriorMeanTransformer):
     """
     Learnable transformer with conditional posterior density estimation "head" based on mixture
     density networks.
@@ -73,6 +59,7 @@ class BenchmarkPosteriorMixtureDensityTransformer(_BenchmarkTransformer):
         self.n_components = n_components
         self.mixture_parameters = nn.ModuleDict({
             key: nn.Sequential(
+                nn.Tanh(),
                 nn.LazyLinear(16),
                 nn.Tanh(),
                 nn.LazyLinear(n_components),

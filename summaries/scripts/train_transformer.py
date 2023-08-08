@@ -241,7 +241,7 @@ def __main__(argv: Optional[List[str]] = None) -> None:
         parts = [
             f"epoch={epoch}",
             f"train_loss={train_loss:.4f}",
-            f"loss={validation_loss:.4f}",
+            f"validation_loss={validation_loss:.4f}",
             f"best_loss={best_loss:.4f}",
             f"bad_epochs={n_bad_epochs:{n_stop_patience_digits}d} / {stop_patience}",
         ]

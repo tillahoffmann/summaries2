@@ -5,10 +5,12 @@ from torch.distributions import AffineTransform, Beta, Categorical, Independent,
 from ..transformers import NeuralTransformer
 
 
-class _CoalescentTransformer(NeuralTransformer):
+class CoalescentPosteriorMeanTransformer(NeuralTransformer):
     """
     Learnable transformer for the coalescent problem without the "head" of the network.
     """
+    transformer: nn.Sequential
+
     def __init__(self) -> None:
         transformer = nn.Sequential(
             # TODO: are 8 units enough here?
@@ -17,29 +19,14 @@ class _CoalescentTransformer(NeuralTransformer):
             nn.LazyLinear(16),
             nn.Tanh(),
             nn.LazyLinear(2),
-            nn.Tanh(),
         )
         super().__init__(transformer)
-
-
-class CoalescentPosteriorMeanTransformer(_CoalescentTransformer):
-    """
-    Learnable transformer with posterior mean predictive "head".
-    """
-    def __init__(self) -> None:
-        super().__init__()
-        self.transformer = nn.Sequential(
-            self.transformer,
-            nn.LazyLinear(16),
-            nn.Tanh(),
-            nn.LazyLinear(2),
-        )
 
     def forward(self, data: Tensor) -> Tensor:
         return self.transformer(data)
 
 
-class CoalescentPosteriorMixtureDensityTransformer(_CoalescentTransformer):
+class CoalescentPosteriorMixtureDensityTransformer(CoalescentPosteriorMeanTransformer):
     """
     Learnable transformer with conditional posterior density estimation "head" based on mixture
     density networks.
@@ -49,6 +36,7 @@ class CoalescentPosteriorMixtureDensityTransformer(_CoalescentTransformer):
         self.n_components = n_components
         self.mixture_parameters = nn.ModuleDict({
             key: nn.Sequential(
+                nn.Tanh(),
                 nn.LazyLinear(16),
                 nn.Tanh(),
                 nn.LazyLinear(size * n_components),

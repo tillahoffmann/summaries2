@@ -53,6 +53,12 @@ transformer = load_pickle(root / "transformers/BenchmarkMixtureDensityConfigRedu
 ```
 
 ```python
+# Show the range over which we see summaries.
+summaries = transformer.transform(observed["data"]).ravel().detach()
+plt.hist(summaries)
+```
+
+```python
 # Get the data, parameters, and posterior samples.
 idx = 3
 dtype = torch.get_default_dtype()
@@ -107,36 +113,34 @@ with torch.no_grad():
     transformed = transformer.transform(features)
     transformed_pts = transformer.transform(X[:, None])
     summary = transformer.transform(X)
-line, = ax.plot(lin, transformed, color="C1", label="MDN compressor")
+line, = ax.plot(lin, transformed, color="C1", label="compressor")
 ax.scatter(x, transformed_pts, edgecolor="w", facecolor=line.get_color(), zorder=9, clip_on=False)
 
 # Fit to the curve using the first few moments.
 def func(x, *params):
     moments = 2 * np.arange(len(params))
     features = np.asarray(x)[:, None] ** moments
-    return np.tanh(features @ params)
+    return features @ params
 
 target = transformed.squeeze()
+sigma = 1 / np.sqrt(stats.norm(0, 1).pdf(lin))
 np.random.seed(0)
-params, _ = optimize.curve_fit(func, lin, target, 1e-2 * np.random.normal(0, 1, 4))
-ax.plot(lin, func(lin, *params), ls="--", color="C2", label="expert fit")
+params, _ = optimize.curve_fit(func, lin, target, np.random.normal(0, 1e-2, 4), sigma=sigma)
+ax.plot(lin, func(lin, *params), ls="--", color="C2", label="fit")
 
 ax.axhline(summary, color="k", ls=":")
 ax.set_xlabel(r"data $y$")
 ax.set_ylabel(r"summary $t(y)$")
-ax.text(0.95, summary + 0.05, r"$t(y_0)$", ha="right", transform=ax.get_yaxis_transform())
-ax.yaxis.set_ticks([0, 0.5, 1])
-ax.text(0.05, 0.05, "(c)", transform=ax.transAxes)
-ax.legend(ncol=2, loc="upper center", columnspacing=1.2, handletextpad=0.6)
+ax.text(0.95, summary + 0.1, r"$t(y_0)$", ha="right", transform=ax.get_yaxis_transform())
+ax.text(0.05, 0.95, "(c)", transform=ax.transAxes, va="top")
+ax.legend(ncol=2, loc="upper right")
 
 ax = axes[1, 1]  # ----- ----- ----- -----
 
 # We first get a batch of distributions where each element corresponds to one value of the summary
 # statistic. Then, for each value of the parameter, we evaluate the batch of distributions.
-tmin = max(transformed.min() - 0.1, -1)
-tmax = min(transformed.max() + 0.1, 1)
-# tmin = transformed.min() - 0.1
-# tmax = transformed.max() + 0.1
+tmin = - 0.5
+tmax = 3.5
 ts = torch.linspace(tmin, tmax, 201)
 with torch.no_grad():
     dists = transformer(data=None, transformed=ts[:, None])
@@ -149,12 +153,11 @@ ax.axvline(theta, color="w", ls=":")
 ax.set_xlabel(r"parameter $\theta$")
 ax.set_ylabel(r"summary $t(y)$")
 
-ax.text(theta + 0.1, 0.05, r"$\theta_0$", color="w", transform=ax.get_xaxis_transform())
-ax.text(0.95, summary + 0.05, r"$t(y_0)$", color="w", ha="right", 
+ax.text(theta + 0.1, 0.95, r"$\theta_0$", color="w", transform=ax.get_xaxis_transform(), va="top")
+ax.text(0.95, summary + 0.1, r"$t(y_0)$", color="w", ha="right", 
         transform=ax.get_yaxis_transform())
-ax.text(0.05, 0.95, "(d)", transform=ax.transAxes, va="top")
-ax.set_ylim(transformed.min() - 0.1, transformed.max() + 0.275)
-ax.axhspan(1, 2, color="silver", zorder=2)
+ax.text(0.05, 0.95, "(d)", transform=ax.transAxes, va="top", color="w")
+ax.set_ylim(tmin, tmax)
 
 fig.tight_layout()
 fig.savefig("../workspace/figures/benchmark.pdf", bbox_inches="tight")
