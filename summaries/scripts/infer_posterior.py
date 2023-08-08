@@ -102,7 +102,7 @@ class CoalescentPLSConfig(CoalescentConfig):
 class BenchmarkConfig(InferenceConfig):
     N_SAMPLES = 1_000
 
-    def create_preprocessor(self) -> Transformer | None:
+    def create_preprocessor(self) -> Transformer:
         return Pipeline([
             ("candidate_summaries", FunctionTransformer(self._evaluate_summaries)),
             ("standardize", StandardScaler()),
@@ -187,8 +187,11 @@ class TreeKernelExpertSummaryConfig(TreeKernelConfig):
     """
     Draw samples using "expert" summary statistics designed for growing trees after standardizing.
     """
-    def create_transformer(self, observed_data: Any | None = None) -> Transformer:
+    def create_preprocessor(self) -> Transformer:
         return StandardScaler()
+
+    def create_transformer(self, observed_data: Any | None = None) -> Transformer:
+        return FunctionTransformer()
 
 
 class TreeKernelLinearPosteriorMeanConfig(TreeKernelExpertSummaryConfig):
