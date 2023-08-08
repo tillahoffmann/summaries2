@@ -42,9 +42,14 @@ def __main__(argv: List[str] | None = None) -> None:
         err_factor = 1 / np.sqrt(n_examples - 1)
 
         # Evaluate the root mean squared error.
-        rmses = np.sqrt(np.square(observed_params[:, None, :] - samples).sum(2).mean(1))
-        rmse = np.mean(rmses)
-        rmse_err = np.std(rmses) * err_factor
+        residuals = observed_params[:, None, :] - samples  # Shape (n_examples, n_samples, n_params)
+        mises = np.square(residuals).sum(2).mean(1)
+        mise = np.mean(mises)
+        mise_err = np.std(mises) * err_factor
+
+        rmises = np.sqrt(mises)
+        rmise = np.mean(rmises)
+        rmise_err = np.std(rmises) * err_factor
 
         # Evaluate the negative log probability using a kernel density estimator.
         nlps = []
@@ -59,16 +64,21 @@ def __main__(argv: List[str] | None = None) -> None:
 
         statistics.append({
             "path": path.name,
+
             "nlp": nlp,
             "nlp_err": nlp_err,
-            "rmse": rmse,
-            "rmse_err": rmse_err,
+
+            "rmise": rmise,
+            "rmise_err": rmise_err,
+
+            "mise": mise,
+            "mise_err": mise_err,
         })
     statistics = pd.DataFrame(statistics).sort_values("nlp")
     if args.csv:
         statistics.to_csv(args.csv, index=False)
 
-    for key in ["rmse", "nlp"]:
+    for key in ["rmise", "nlp"]:
         sigfigs = args.sigfigs or int(np.ceil(-np.log10(statistics[f"{key}_err"])).max())
         statistics[f"{key}_err"] = statistics[f"{key}_err"].round(sigfigs)
         statistics[key] = statistics[key].round(sigfigs)
