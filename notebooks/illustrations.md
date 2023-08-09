@@ -15,9 +15,9 @@ figwidth, figheight = mpl.rcParams["figure.figsize"]
 # Illustration of different methods and classes of summaries
 
 ```python
-fig, axes = plt.subplots(1, 2, figsize=(figwidth, 3), width_ratios=(2, 3))
+fig, axes = plt.subplots(1, 2, figsize=(figwidth, 3), width_ratios=(3, 2))
 
-ax = axes[0]
+ax = axes[1]
 sets = {
     "all": {
         "text": r"$\mathcal{U}$",
@@ -132,7 +132,7 @@ ax.set_axis_off()
 
 
 # Show the relationships between different methods.
-ax = axes[1]
+ax = axes[0]
 hspace = 2.5
 info_vspace = 0.7
 texts = {
