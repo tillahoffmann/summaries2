@@ -55,19 +55,19 @@ b = 1  # Scale parameter of the gamma distribution.
 a = np.linspace(1, 4, 100)
 second_moment = np.linspace(.2, .725, 101)
 aa, ss = np.meshgrid(a, second_moment)
-entropy_gain = evaluate_entropy_gain(aa, b, n, ss) 
+entropy_gain = evaluate_entropy_gain(aa, b, n, ss)
 
 fig, axes = plt.subplots(1, 2)
 
 # Plot entropy gain with "centered" colorbar.
 ax = axes[0]
 vmax = np.abs(entropy_gain).max()
-mappable = ax.pcolormesh(a, second_moment, entropy_gain, vmax=vmax, vmin=-vmax, 
+mappable = ax.pcolormesh(a, second_moment, entropy_gain, vmax=vmax, vmin=-vmax,
                          cmap='coolwarm', rasterized=True)
 cs = ax.contour(a, second_moment, entropy_gain, levels=[0], colors='k', linestyles=':')
 
 # Plot the expected second moment.
-ax.plot(a, 1 / a, color='k', ls='--', 
+ax.plot(a, 1 / a, color='k', ls='--',
         label='expected second\nmoment 'r'$\left\langle t\right\rangle$')
 
 # Consider a particular example.
@@ -110,7 +110,7 @@ ax.set_xlabel(r'parameter $\theta$')
 
 mle = 1 / sm0
 ax.axvline(mle, color='k', ls='--')
-ax.text(mle + 0.3, 0.95, r"$\widehat{\vert\theta\vert}$", 
+ax.text(mle + 0.3, 0.95, r"$\widehat{\vert\theta\vert}$",
         transform=ax.get_xaxis_transform(), va="top")
 a1, b1 = evaluate_posterior_params(a0, b, n, sm0)
 posterior = stats.gamma(a1, scale=1 / b1)
@@ -148,4 +148,25 @@ ax.annotate('', (x[i], y[i]), pt, arrowprops=arrowprops)
 ax.text(*pt, r"$\Delta<0$", ha='left', va='center')
 
 fig.savefig('../workspace/figures/tough-nuts.pdf')
+```
+
+```python
+# Generate numbers for the text...
+prior_entropy = evaluate_entropy(a0, 1)
+print(f"prior entropy: {prior_entropy:.2f}")
+print(f"posterior entropy: {evaluate_posterior_entropy(a0, 1, n, sm0):.2f}")
+
+# For the expected posterior entropy, we need to sample a bunch from the prior.
+N = 100_000
+theta = np.random.gamma(a0, 1, N)
+z = np.random.normal(0, 1 / np.sqrt(theta[:, None]), (N, n))
+sm = np.square(z).mean(axis=1)
+
+# Evaluate the posterior parameters and evaluate the entropies.
+a, b = evaluate_posterior_params(a0, 1, n, sm)
+epes = evaluate_entropy(a, b)
+print(f"expected posterior entropy: {epes.mean():.2f} +- {epes.std() / np.sqrt(N - 1):.2f}")
+
+# Evaluate the fraction of times when the entropy increased.
+print(f"fraction of entropy increases: {(epes > prior_entropy).mean()}")
 ```
