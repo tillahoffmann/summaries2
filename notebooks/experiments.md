@@ -61,7 +61,7 @@ texts = {
     "simulated_summaries": (0, -5 * vspace, "simulated summaries\n$t(z)\\in\\mathbb{R}^q$", vkwargs),
     "observed_summaries": (2 * hspace, -5 * vspace, "observed summaries\n$t(y)\\in\\mathbb{R}^q$", vkwargs),
     "abc": (2 * hspace, -6 * vspace, "approximate Bayesian\ncomputation", fkwargs),
-    "mdn-compressed-samples": (2 * hspace, -7 * vspace, "MDN-compressed samples\n$\\tilde\\theta\\in\\mathbb{R}^p\\sim f\\left(\\theta\\mid t(y)\\right)$", vkwargs),
+    "mdn-compressed-samples": (2 * hspace, -7 * vspace, "MDN-compressed samples\n$\\tilde\\theta\\in\\mathbb{R}^p\\sim \\tilde f\\left(\\theta\\mid t(y)\\right)$", vkwargs),
     "estimator": (0, -6 * vspace, "mixture density\nnetwork $h:\\mathbb{R}^q\\rightarrow\\mathcal{F}$", fkwargs),
     "estimate": (0, -7 * vspace, "density estimate\n$\\hat f\\left(\\theta\\mid t(z)\\right)\\in \\mathcal{F}$", vkwargs),
     "loss": (- hspace / 2, -8 * vspace, "NLP loss", fkwargs), 
