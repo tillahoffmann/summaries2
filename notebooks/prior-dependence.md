@@ -89,8 +89,8 @@ for key, result in results.items():
                     label=fr'${key.title()}$ ($\hat{{I}}={mi:.2f}$)')
 
 # Set axes labels and label each panel.
-axes[0, 1].set_ylabel(r'summary $\bar x$')
-axes[1, 1].set_ylabel(r'summary $\log\mathrm{var}\,x$')
+axes[0, 1].set_ylabel(r'summary $\bar y$')
+axes[1, 1].set_ylabel(r'summary $\log\mathrm{var}\,y$')
 [ax.set_xlabel(r'parameter $\theta$') for ax in axes[1]]
 
 axes[0, 0].legend()
