@@ -161,4 +161,6 @@ ax.set_ylim(tmin, tmax)
 
 fig.tight_layout()
 fig.savefig("../workspace/figures/benchmark.pdf", bbox_inches="tight")
+
+theta
 ```
