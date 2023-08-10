@@ -219,8 +219,8 @@ ax.add_patch(arrow)
 
 # Add the legend for different types of connections.
 handles = [
-    mpl.lines.Line2D([], [], color="gray"),
     mpl.lines.Line2D([], [], color="gray", ls="--"),
+    mpl.lines.Line2D([], [], color="gray"),
 ]
 labels = [
     "special case",
