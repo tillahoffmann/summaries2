@@ -213,9 +213,10 @@ for ls, path in paths:
     arrow = mpl.patches.PathPatch(arrow_path(path, 0.075), color="gray")
     ax.add_patch(arrow)
     
-# Add the bidirectional arrow for the last connection.
-arrow = mpl.patches.PathPatch(arrow_path(path, 0.075, backward=True), color="gray")
-ax.add_patch(arrow)
+    # Add the bidirectional arrow for large-sample correspondence.
+    if ls == "-":
+        arrow = mpl.patches.PathPatch(arrow_path(path, 0.075, backward=True), color="gray")
+        ax.add_patch(arrow)
 
 # Add the legend for different types of connections.
 handles = [
