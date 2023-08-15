@@ -4,6 +4,7 @@ import networkx as nx
 import numpy as np
 from pathlib import Path
 import pickle
+from scipy import stats
 from snippets.empirical_distribution import sample_empirical_pdf
 from tqdm import tqdm
 from typing import List
@@ -53,6 +54,11 @@ def __main__(argv: List[str] | None = None) -> None:
         result.setdefault("map_estimate", []).append(posterior.map_estimate_)
         result.setdefault("log_prob_actual", []).append(posterior.log_prob(gamma))
         result.setdefault("log_prob", []).append(log_prob)
+
+        # Record the Spearman rank correlation between inferred and actual history.
+        histories = np.asarray(posterior._sampler.get_histories())
+        spearman = stats.spearmanr(np.arange(histories.shape[1]), histories.mean(axis=0))
+        result.setdefault("spearman", []).append(spearman.statistic)
 
     result = {key: np.asarray(value) for key, value in result.items()}
     result["map_estimate"] = result["map_estimate"].reshape((n_observed, 1))
