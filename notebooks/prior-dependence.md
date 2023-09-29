@@ -66,7 +66,7 @@ for result in results.values():
     label = fr'$\theta\sim\mathrm{{Normal}}\left({mu}, 0.1\right)$'
     line, = ax.plot(lin, prior.pdf(lin), label=label)
     ax.axvline(mu, color=line.get_color(), ls='--')
-ax.set_ylabel(r'prior $p(\theta)$')
+ax.set_ylabel(r'prior $\pi(\theta)$')
 
 # Show the likelihood parameters as a function of the parameter.
 ax = axes[0, 0]

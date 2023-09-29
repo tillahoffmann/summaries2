@@ -25,7 +25,7 @@ def evaluate_log_likelihood(x, theta):
 
     components = torch.distributions.Normal(locs, scale)
     assert components.batch_shape == theta.shape + (1, 2,)
-    
+
     dist = torch.distributions.MixtureSameFamily(
         torch.distributions.Categorical(torch.ones((1, 2)) / 2),
         components,
@@ -75,7 +75,7 @@ ax = axes[0, 0] # ----- ----- ----- -----
 lin = 3 * torch.linspace(-1, 1, 200)
 ax.plot(lin, evaluate_log_likelihood(lin[:, None, None], theta).exp())
 ax.scatter(x, torch.zeros_like(x), marker="|", color="k", zorder=2)
-ax.set_ylabel(r"likelihood $p\left(y\mid\theta\right)$")
+ax.set_ylabel(r"likelihood $g\left(y\mid\theta\right)$")
 ax.yaxis.set_major_locator(mpl.ticker.MaxNLocator(3))
 ax.text(0.05, 0.95, "(a)", transform=ax.transAxes, va="top")
 
@@ -98,7 +98,7 @@ with torch.no_grad():
 ax.plot(lin, log_posterior.exp(), label="MDN")
 
 ax.axvline(theta, color="k", ls=":")
-ax.set_ylabel(r"posterior $p\left(\theta\mid y_0\right)$")
+ax.set_ylabel(r"posterior $f\left(\theta\mid y_0\right)$")
 ax.legend()
 ax.text(theta + 0.1, 0.95, r"$\theta_0$", va="top", transform=ax.get_xaxis_transform())
 ax.set_ylim(top=0.6)
@@ -154,7 +154,7 @@ ax.set_xlabel(r"parameter $\theta$")
 ax.set_ylabel(r"summary $t(y)$")
 
 ax.text(theta + 0.1, 0.95, r"$\theta_0$", color="w", transform=ax.get_xaxis_transform(), va="top")
-ax.text(0.95, summary + 0.1, r"$t(y_0)$", color="w", ha="right", 
+ax.text(0.95, summary + 0.1, r"$t(y_0)$", color="w", ha="right",
         transform=ax.get_yaxis_transform())
 ax.text(0.05, 0.95, "(d)", transform=ax.transAxes, va="top", color="w")
 ax.set_ylim(tmin, tmax)

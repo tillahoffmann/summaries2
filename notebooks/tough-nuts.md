@@ -73,7 +73,7 @@ ax.plot(a, 1 / a, color='k', ls='--',
 # Consider a particular example.
 a0 = 1.5
 sm0 = 0.3
-pts = ax.scatter(a0, sm0, color='k', marker='o', zorder=9, label='Example point')
+pts = ax.scatter(a0, sm0, color='k', marker='o', zorder=9, label='example point')
 pts.set_edgecolor('w')
 
 arrowprops = {
@@ -105,7 +105,7 @@ ax.set_ylim(second_moment[0], second_moment[-1])
 
 # Show the posterior if we use the absolute value of \theta as the precision.
 ax = axes[1]
-ax.set_ylabel(r'posterior $p(\theta\mid y_0)$')
+ax.set_ylabel(r'posterior $f(\theta\mid y)$')
 ax.set_xlabel(r'parameter $\theta$')
 
 mle = 1 / sm0
