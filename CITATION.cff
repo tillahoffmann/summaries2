@@ -2,7 +2,7 @@
 cff-version: 1.2.0
 message: If you use this software, please cite it as below.
 title: Minimizing the Expected Posterior Entropy Yields Optimal Summary Statistics
-url: "https://github.com/tillahoffmann/summaries"
+url: "https://github.com/onnela-lab/summaries"
 authors:
 - family-names: Hoffmann
   given-names: Till
