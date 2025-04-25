@@ -9,6 +9,7 @@ from pathlib import Path
 from scipy import stats
 
 mpl.style.use("../.mplstyle")
+figwidth, figheight = mpl.rcParams["figure.figsize"]
 ```
 
 ```python
@@ -173,7 +174,7 @@ pass
 ```
 
 ```python
-fig = plt.figure()
+fig = plt.figure(figsize=(figwidth, 0.9 * figheight))
 gs = fig.add_gridspec(2, 2)
 
 # Declare how each point should be visualized.

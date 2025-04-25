@@ -8,6 +8,7 @@ from snippets.plot import label_axes
 
 
 mpl.style.use("../.mplstyle")
+figwidth, figheight = mpl.rcParams["figure.figsize"]
 ```
 
 ```python
@@ -57,7 +58,7 @@ second_moment = np.linspace(.2, .725, 101)
 aa, ss = np.meshgrid(a, second_moment)
 entropy_gain = evaluate_entropy_gain(aa, b, n, ss)
 
-fig, axes = plt.subplots(1, 2)
+fig, axes = plt.subplots(1, 2, figsize=(figwidth, figheight * 0.8))
 
 # Plot entropy gain with "centered" colorbar.
 ax = axes[0]

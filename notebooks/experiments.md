@@ -13,13 +13,13 @@ figwidth, figheight = mpl.rcParams["figure.figsize"]
 ```
 
 ```python
-fig, ax = plt.subplots()
+fig, ax = plt.subplots(figsize=(figwidth, figheight))
 
 vspace = 1
 hspace = 2.1
 kwargs = {
     "ha": "center",
-    "va": "center", 
+    "va": "center",
     "fontsize": "small",
 }
 fkwargs = kwargs | {
@@ -64,7 +64,7 @@ texts = {
     "mdn-compressed-samples": (2 * hspace, -7 * vspace, "MDN-compressed samples\n$\\tilde\\theta\\in\\mathbb{R}^p\\sim \\tilde f\\left(\\theta\\mid t(y)\\right)$", vkwargs),
     "estimator": (0, -6 * vspace, "mixture density\nnetwork $h:\\mathbb{R}^q\\rightarrow\\mathcal{F}$", fkwargs),
     "estimate": (0, -7 * vspace, "density estimate\n$\\hat f\\left(\\theta\\mid t(z)\\right)\\in \\mathcal{F}$", vkwargs),
-    "loss": (- hspace / 2, -8 * vspace, "NLP loss", fkwargs), 
+    "loss": (- hspace / 2, -8 * vspace, "NLP loss", fkwargs),
 }
 
 elements = {}
@@ -80,12 +80,12 @@ if True:
     ax.set_xlim(xmin, xmax)
     ax.set_ylim(ymin, ymax)
     ax.set_aspect("equal")
-    
+
     # Then adjust based on the actual extent of the box containing the text.
     fig.tight_layout()
     fig.draw_without_rendering()
     transform = ax.transData.inverted()
-    extents = np.asarray([transform.transform(element.get_bbox_patch().get_window_extent()) 
+    extents = np.asarray([transform.transform(element.get_bbox_patch().get_window_extent())
                           for element in elements.values()])
     xmin, ymin = extents.min(axis=0)[0]
     xmax, ymax = extents.max(axis=0)[1]
@@ -105,12 +105,12 @@ connections = [
     [("params", 6), ("simulator", 12)],
     [("simulator", 6), ("simulated_data", 12)],
     [
-        ("simulated_data", 3), 
+        ("simulated_data", 3),
         (get_anchor(elements["compressor"], 11).x, get_anchor(elements["simulated_data"], 3).y),
         ("compressor", 11),
     ],
     [
-        ("compressor", 7), 
+        ("compressor", 7),
         (get_anchor(elements["compressor"], 7).x, get_anchor(elements["simulated_summaries"], 2.75).y),
         ("simulated_summaries", 2.75),
     ],
@@ -119,7 +119,7 @@ connections = [
         (get_anchor(elements["compressor"], 6).x, get_anchor(elements["simulated_summaries"], 3.25).y),
         (get_anchor(elements["compressor"], 6).x, get_anchor(elements["abc"], 9).y),
         ("abc", 9),
-        
+
     ],
     [("simulated_summaries", 6), ("estimator", 12)],
     [("estimator", 6), ("estimate", 12)],
@@ -136,12 +136,12 @@ connections = [
 
     # Observed.
     [
-        ("observed_data", 9), 
+        ("observed_data", 9),
         (get_anchor(elements["compressor"], 1).x, get_anchor(elements["observed_data"], 9).y),
         ("compressor", 1),
     ],
     [
-        ("compressor", 5), 
+        ("compressor", 5),
         (get_anchor(elements["compressor"], 5).x, get_anchor(elements["observed_summaries"], 9).y),
         ("observed_summaries", 9),
     ],
@@ -198,7 +198,7 @@ for (row, col), cell in celld.items():
     x = cell.get_x()
     y = cell.get_y() - (row + 1) * (height - original_height)
     phantom = mpl.patches.Rectangle(
-        (x, y), cell.get_width(), cell.get_height(), transform=ax.transAxes, 
+        (x, y), cell.get_width(), cell.get_height(), transform=ax.transAxes,
         facecolor=color, zorder=-1)
     ax.add_patch(phantom)
 
