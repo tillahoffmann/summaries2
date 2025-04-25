@@ -6,7 +6,7 @@ on:
     branches: [main]
 
 env:
-  cmdstanVersion: "2.31.0"
+  cmdstanVersion: "2.36.0"
 
 jobs:
   build:
