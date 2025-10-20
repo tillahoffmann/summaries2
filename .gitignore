@@ -163,5 +163,5 @@ workspace/
 *.ipynb
 *.tmp
 *.hpp
-summaries/scripts/infer_benchmark
+src/summaries/scripts/infer_benchmark
 ????-??-??-*

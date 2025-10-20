@@ -7,6 +7,7 @@ from summaries.entropy import estimate_mutual_information
 from scipy import stats
 
 mpl.style.use("../.mplstyle")
+figwidth, figheight = mpl.rcParams["figure.figsize"]
 ```
 
 ```python
@@ -55,7 +56,7 @@ num_points = 200  # Number of points in the figure (we sample more for MI estima
 
 results = generate_data(m, n, scale)
 
-fig, axes = plt.subplots(2, 2, sharex=True)
+fig, axes = plt.subplots(2, 2, sharex=True, figsize=(figwidth, 0.8 * figheight))
 
 # Show the two priors.
 ax = axes[1, 0]
@@ -73,7 +74,7 @@ ax = axes[0, 0]
 lin = np.linspace(-1, 1, 100) * (1 + 3 * scale)
 ax.plot(lin, np.maximum(0, lin), label=r'location', color='k')
 ax.plot(lin, np.minimum(np.exp(lin / 2), 1), label=r'scale', color='k', ls='--')
-ax.set_ylabel('likelihood parameters')
+ax.set_ylabel('likelihood\nparameters')
 
 # Plot the scatter of summaries against parameter value for both priors.
 step = m // num_points  # Only plot `num_points` for better visualisation.

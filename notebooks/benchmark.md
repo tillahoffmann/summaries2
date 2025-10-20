@@ -11,6 +11,7 @@ import torch
 
 
 mpl.style.use("../.mplstyle")
+figwidth, figheight = mpl.rcParams["figure.figsize"]
 ```
 
 ```python
@@ -67,7 +68,7 @@ X = torch.as_tensor(observed["data"][idx], dtype=dtype)
 x = X[:, 0]
 samples = mdnabc["samples"][idx].squeeze()
 
-fig, axes = plt.subplots(2, 2, sharex="col", sharey="row")
+fig, axes = plt.subplots(2, 2, sharex="col", sharey="row", figsize=(figwidth, figheight))
 
 ax = axes[0, 0] # ----- ----- ----- -----
 

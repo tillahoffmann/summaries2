@@ -15,7 +15,7 @@ figwidth, figheight = mpl.rcParams["figure.figsize"]
 # Illustration of different methods and classes of summaries
 
 ```python
-fig, axes = plt.subplots(1, 2, figsize=(figwidth, 3), width_ratios=(3, 2))
+fig, axes = plt.subplots(1, 2, figsize=(figwidth, 2.55), width_ratios=(3.2, 2))
 
 ax = axes[1]
 sets = {
@@ -126,7 +126,7 @@ for key, value in sets.items():
     ax.text(*value["textxy"], value["text"], **textkwargs, zorder=9)
 
 ax.set_xlim(0, 11)
-ax.set_ylim(-0.2, 10.6)
+ax.set_ylim(-3, 10.6)
 ax.set_aspect("equal")
 ax.set_axis_off()
 
@@ -157,10 +157,10 @@ elements = {}
 for key, (x, y, text) in texts.items():
     element = ax.text(x, y, text, ha="center", va="center", fontsize="small", bbox=bbox)
     elements[key] = element
-    
+
 hpad = 1.2
 ax.set_xlim(-hpad, hspace + hpad)
-ax.set_ylim(-2.5, 3.1)
+ax.set_ylim(-2.5, 2.5)
 ax.set_aspect("equal")
 
 ax.set_axis_off()
@@ -170,7 +170,7 @@ fig.draw_without_rendering()
 scale = ax.transAxes.get_matrix()[0, 0] / ax.transData.get_matrix()[0, 0]
 width = 2
 info = mpl.patches.FancyBboxPatch(
-    (-width / 2, -3.25 * info_vspace), width, 5.75 * info_vspace, boxstyle=boxstyle, mutation_scale=1 / scale, 
+    (-width / 2, -3.25 * info_vspace), width, 5.75 * info_vspace, boxstyle=boxstyle, mutation_scale=1 / scale,
     color="C0", alpha=0.2,
 )
 ax.add_patch(info)
@@ -181,8 +181,8 @@ fig.draw_without_rendering()
 info_right = get_anchor(info, 3).x
 paths = [
     ("--", [
-        get_anchor(info, 0), 
-        (get_anchor(info, 0).x, get_anchor(elements["approx"], 9).y), 
+        get_anchor(info, 0),
+        (get_anchor(info, 0).x, get_anchor(elements["approx"], 9).y),
         get_anchor(elements["approx"], 9)
     ]),
     ("--", [
@@ -212,7 +212,7 @@ for ls, path in paths:
     ax.add_patch(patch)
     arrow = mpl.patches.PathPatch(arrow_path(path, 0.075), color="gray")
     ax.add_patch(arrow)
-    
+
     # Add the bidirectional arrow for large-sample correspondence.
     if ls == "-":
         arrow = mpl.patches.PathPatch(arrow_path(path, 0.075, backward=True), color="gray")
@@ -227,7 +227,7 @@ labels = [
     "special case",
     "large-sample limit",
 ]
-ax.legend(handles, labels, loc="upper center")
+ax.legend(handles, labels, loc="lower left", bbox_to_anchor=(.9, 0))
 
 label_axes(axes)
 fig.savefig("../workspace/figures/illustration.pdf")
