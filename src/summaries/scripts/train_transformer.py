@@ -190,7 +190,7 @@ def __main__(argv: Optional[List[str]] = None) -> None:
 
     # Run the training.
     optim = Adam(transformer.parameters(), 0.01)
-    scheduler = ReduceLROnPlateau(optim, verbose=True)
+    scheduler = ReduceLROnPlateau(optim)
     stop_patience = 2 * scheduler.patience
     n_stop_patience_digits = len(str(stop_patience))
 
