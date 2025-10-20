@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
 import subprocess
+import sys
 from textwrap import dedent
 
 
@@ -43,6 +44,7 @@ class shared:
     """
     Shared code to be used in tests (cf. https://stackoverflow.com/a/76082875/1150961).
     """
+    @staticmethod
     def assert_pickle_loadable(path: str) -> None:
         """
         Try to load a pickled file in a separate process to verify its un-pickle-ability.
@@ -53,7 +55,8 @@ class shared:
             pickle.load(fp)
         print("success")
         """
-        process = subprocess.Popen(["python", "-"], stdin=subprocess.PIPE, text=True,
+        # Use sys.executable instead of "python" to ensure we use the correct Python interpreter
+        process = subprocess.Popen([sys.executable, "-"], stdin=subprocess.PIPE, text=True,
                                    stderr=subprocess.PIPE, stdout=subprocess.PIPE)
         stdout, stderr = process.communicate(dedent(code))
         if process.returncode or stdout.strip() != "success":
