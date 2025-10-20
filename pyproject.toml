@@ -18,6 +18,7 @@ build-backend = "setuptools.build_meta"
 
 [tool.uv.extra-build-dependencies]
 torch-scatter = ["torch"]
+fasttr = ["pybind11"]
 
 [tool.uv.sources]
 snippets = { git = "https://github.com/tillahoffmann/snippets.git", rev = "045d0ce" }
@@ -36,6 +37,7 @@ dev = [
     "pandas>=2.3.3",
     "pytest>=8.4.2",
     "pytest-cov>=7.0.0",
+    "ruff>=0.14.1",
     "shapely>=2.1.2",
     "snippets",
     "tqdm>=4.67.1",
