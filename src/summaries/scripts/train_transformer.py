@@ -14,12 +14,19 @@ from torch_geometric.data import Data as GeometricData
 from torch_geometric.loader import DataLoader as GeometricDataLoader
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
-from ..experiments.benchmark import BenchmarkPosteriorMeanTransformer, \
-    BenchmarkPosteriorMixtureDensityTransformer
-from ..experiments.coalescent import CoalescentPosteriorMixtureDensityTransformer, \
-    CoalescentPosteriorMeanTransformer
-from ..experiments.tree import predecessors_to_datasets, TreePosteriorMeanTransformer, \
-    TreePosteriorMixtureDensityTransformer
+from ..experiments.benchmark import (
+    BenchmarkPosteriorMeanTransformer,
+    BenchmarkPosteriorMixtureDensityTransformer,
+)
+from ..experiments.coalescent import (
+    CoalescentPosteriorMixtureDensityTransformer,
+    CoalescentPosteriorMeanTransformer,
+)
+from ..experiments.tree import (
+    predecessors_to_datasets,
+    TreePosteriorMeanTransformer,
+    TreePosteriorMixtureDensityTransformer,
+)
 from ..nn import NegLogProbLoss
 from .base import resolve_path
 
@@ -37,6 +44,7 @@ class TrainConfig:
     """
     Base class for training configurations.
     """
+
     LOSS: Callable[..., Tensor] | None = None
     MAX_EPOCHS: int | None = None
     DATA_LOADER_KWARGS: Dict[str, Any] = {}
@@ -149,8 +157,9 @@ TRAIN_CONFIGS = [
 TRAIN_CONFIGS = {config.__name__: config for config in TRAIN_CONFIGS}
 
 
-def _expand_batch(batch: Tuple[torch.Tensor, torch.Tensor] | GeometricData) \
-        -> Tuple[torch.Tensor, torch.Tensor, int] | Tuple[GeometricData, int]:
+def _expand_batch(
+    batch: Tuple[torch.Tensor, torch.Tensor] | GeometricData,
+) -> Tuple[torch.Tensor, torch.Tensor, int] | Tuple[GeometricData, int]:
     if isinstance(batch, GeometricData):
         data = batch
         params = batch.params
@@ -245,18 +254,21 @@ def __main__(argv: Optional[List[str]] = None) -> None:
             f"best_loss={best_loss:.4f}",
             f"bad_epochs={n_bad_epochs:{n_stop_patience_digits}d} / {stop_patience}",
         ]
-        print(' '.join(parts))
+        print(" ".join(parts))
         if n_bad_epochs == 2 * scheduler.patience:
             break
 
     with args.output.open("wb") as fp:
-        pickle.dump({
-            "args": vars(args),
-            "start": start,
-            "end": datetime.now(),
-            "transformer": transformer,
-            "last_validation_loss": validation_loss,
-        }, fp)
+        pickle.dump(
+            {
+                "args": vars(args),
+                "start": start,
+                "end": datetime.now(),
+                "transformer": transformer,
+                "last_validation_loss": validation_loss,
+            },
+            fp,
+        )
 
 
 if __name__ == "__main__":

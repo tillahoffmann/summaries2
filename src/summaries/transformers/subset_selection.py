@@ -19,23 +19,32 @@ class _ExhaustiveSubsetSelectorMixin(BaseEstimator):
     """
     Mixin to perform exhaustive subset selection.
     """
+
     def __init__(self) -> None:
         super().__init__()
         self.masks_: Optional[np.ndarray] = None
         self.losses_: Optional[np.ndarray] = None
 
-    def fit(self, data: np.ndarray, params: np.ndarray) -> _ExhaustiveSubsetSelectorMixin:
+    def fit(
+        self, data: np.ndarray, params: np.ndarray
+    ) -> _ExhaustiveSubsetSelectorMixin:
         data, params = check_X_y(data, params, multi_output=True)
 
         # Construct the binary mask.
-        n_masks = 2 ** self.n_features_in_
-        self.masks_ = (np.arange(1, n_masks)[:, None] >> np.arange(self.n_features_in_)) & 1 > 0
+        n_masks = 2**self.n_features_in_
+        self.masks_ = (
+            np.arange(1, n_masks)[:, None] >> np.arange(self.n_features_in_)
+        ) & 1 > 0
 
         # Iterate over all masks and record the associated loss.
-        self.losses_ = np.asarray([self._evaluate_mask(data, params, mask) for mask in self.masks_])
+        self.losses_ = np.asarray(
+            [self._evaluate_mask(data, params, mask) for mask in self.masks_]
+        )
         return self
 
-    def _evaluate_mask(self, data: np.ndarray, params: np.ndarray, mask: np.ndarray) -> float:
+    def _evaluate_mask(
+        self, data: np.ndarray, params: np.ndarray, mask: np.ndarray
+    ) -> float:
         """
         Evaluate a mask returning a lower value for better masks.
         """
@@ -54,8 +63,9 @@ class _ExhaustiveSubsetSelectorMixin(BaseEstimator):
         return check_array(data)[:, self.best_mask_]
 
 
-class MinimumConditionalEntropyTransformer(_DataDependentTransformerMixin,
-                                           _ExhaustiveSubsetSelectorMixin):
+class MinimumConditionalEntropyTransformer(
+    _DataDependentTransformerMixin, _ExhaustiveSubsetSelectorMixin
+):
     """
     Exhaustive subset selection to minimize the conditional (given the observed data) posterior
     entropy as proposed by Nunes and Balding (2010).
@@ -66,8 +76,15 @@ class MinimumConditionalEntropyTransformer(_DataDependentTransformerMixin,
         n_samples: Passed to the internal nearest neighbor sampler for estimating the entropy.
         thin: Use only every `thin` samples to draw posterior samples for estimating the entropy.
     """
-    def __init__(self, observed_data: np.ndarray, *, frac: float | None = None,
-                 n_samples: int | None = None, thin: int = 1) -> None:
+
+    def __init__(
+        self,
+        observed_data: np.ndarray,
+        *,
+        frac: float | None = None,
+        n_samples: int | None = None,
+        thin: int = 1,
+    ) -> None:
         super().__init__(observed_data)
         self.frac = frac
         self.n_samples = n_samples
@@ -76,11 +93,15 @@ class MinimumConditionalEntropyTransformer(_DataDependentTransformerMixin,
     def _evaluate_mask(self, data, params: np.ndarray, mask: np.ndarray) -> float:
         # Building the tree is relatively expensive compared with querying because we only query
         # once. The keyword arguments try to reduce the tree build time.
-        sampler = NearestNeighborAlgorithm(frac=self.frac, n_samples=self.n_samples,
-                                           balanced_tree=False, compact_nodes=False)
-        sampler.fit(data[::self.thin, mask], params[::self.thin])
+        sampler = NearestNeighborAlgorithm(
+            frac=self.frac,
+            n_samples=self.n_samples,
+            balanced_tree=False,
+            compact_nodes=False,
+        )
+        sampler.fit(data[:: self.thin, mask], params[:: self.thin])
         # Add a batch dimension to the observed data, draw samples, and remove the batch dimension.
-        samples, = sampler.predict([self.observed_data[mask]])
+        (samples,) = sampler.predict([self.observed_data[mask]])
         return estimate_entropy(samples)
 
 
@@ -88,8 +109,14 @@ class _GreedySubsetSelectorMixin(_DataDependentTransformerMixin):
     """
     Mixin to perform greedy subset selection.
     """
-    def __init__(self, observed_data: np.ndarray, frac: float | None = None,
-                 n_samples: int | None = None, thin: int = 1) -> None:
+
+    def __init__(
+        self,
+        observed_data: np.ndarray,
+        frac: float | None = None,
+        n_samples: int | None = None,
+        thin: int = 1,
+    ) -> None:
         super().__init__(observed_data)
         self.frac = frac
         self.n_samples = n_samples
@@ -102,8 +129,8 @@ class _GreedySubsetSelectorMixin(_DataDependentTransformerMixin):
 
         # Thin out the data and parameters for more efficient feature selection.
         if self.thin > 1:
-            data = data[::self.thin]
-            params = params[::self.thin]
+            data = data[:: self.thin]
+            params = params[:: self.thin]
 
         # Iterate over all the features
         candidates = list(range(data.shape[1]))
@@ -120,10 +147,12 @@ class _GreedySubsetSelectorMixin(_DataDependentTransformerMixin):
             if self.features_:
                 sampler = NearestNeighborAlgorithm(**kwargs)
                 sampler.fit(data[:, self.features_], params)
-                current, = sampler.predict([self.observed_data[self.features_]])
+                (current,) = sampler.predict([self.observed_data[self.features_]])
             else:
                 n_samples = self.n_samples or int(self.frac * params.shape[0])
-                current = params[np.random.choice(params.shape[0], n_samples, replace=False)]
+                current = params[
+                    np.random.choice(params.shape[0], n_samples, replace=False)
+                ]
 
             # Score all candidates.
             scores = []
@@ -131,11 +160,11 @@ class _GreedySubsetSelectorMixin(_DataDependentTransformerMixin):
                 features = self.features_ + [candidate]
                 sampler = NearestNeighborAlgorithm(**kwargs)
                 sampler.fit(data[:, features], params)
-                proposed, = sampler.predict([self.observed_data[features]])
+                (proposed,) = sampler.predict([self.observed_data[features]])
                 scores.append(self._score_samples(current, proposed))
 
             # If all scores are bad, we're done here.
-            if np.max(scores) == - float("inf"):
+            if np.max(scores) == -float("inf"):
                 break
 
             # Get the next best feature.
@@ -144,7 +173,9 @@ class _GreedySubsetSelectorMixin(_DataDependentTransformerMixin):
 
         return self
 
-    def _score_samples(self, current: Optional[np.ndarray], proposed: np.ndarray) -> float:
+    def _score_samples(
+        self, current: Optional[np.ndarray], proposed: np.ndarray
+    ) -> float:
         """
         Compare two sets of samples.
 
@@ -175,10 +206,18 @@ class ApproximateSufficiencyTransformer(_GreedySubsetSelectorMixin):
     Greedy subset selection to find "approximately sufficient" statistics as proposed by Joyce and
     Marjoram (2008).
     """
-    def __init__(self, observed_data: np.ndarray, bins: int = 10,
-                 range_: Tuple[float, float] | None = None, likelihood_ratio: bool = False,
-                 frac: float | None = None, n_samples: int | None = None, alpha: float = 0.05,
-                 thin: int = 1) -> None:
+
+    def __init__(
+        self,
+        observed_data: np.ndarray,
+        bins: int = 10,
+        range_: Tuple[float, float] | None = None,
+        likelihood_ratio: bool = False,
+        frac: float | None = None,
+        n_samples: int | None = None,
+        alpha: float = 0.05,
+        thin: int = 1,
+    ) -> None:
         super().__init__(observed_data, frac, n_samples, thin)
         self.bins = bins
         self.likelihood_ratio = likelihood_ratio
@@ -192,7 +231,10 @@ class ApproximateSufficiencyTransformer(_GreedySubsetSelectorMixin):
 
         range_ = self.range_
         if self.range_ is None:
-            range_ = min(current.min(), proposed.min()), max(current.max(), proposed.max())
+            range_ = (
+                min(current.min(), proposed.min()),
+                max(current.max(), proposed.max()),
+            )
 
         hist_current, _ = np.histogram(current, self.bins, range_)
         hist_proposed, _ = np.histogram(proposed, self.bins, range_)
@@ -231,4 +273,4 @@ class ApproximateSufficiencyTransformer(_GreedySubsetSelectorMixin):
             p_value = np.minimum(p_value, 1 - p_value)
             if p_value.min() < self.alpha / 2:
                 return np.random.uniform(0, 1)
-        return - float("inf")
+        return -float("inf")

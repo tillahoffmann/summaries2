@@ -11,7 +11,7 @@ def sample_params(n: int, p: int) -> np.ndarray:
 
 def sample_data(params: np.ndarray) -> np.ndarray:
     n = params.shape[0]
-    x = params + np.random.normal(0, .1, (n, 2))
+    x = params + np.random.normal(0, 0.1, (n, 2))
     return np.hstack([x, np.random.normal(0, 10, (n, 1))])
 
 
@@ -44,6 +44,7 @@ class shared:
     """
     Shared code to be used in tests (cf. https://stackoverflow.com/a/76082875/1150961).
     """
+
     @staticmethod
     def assert_pickle_loadable(path: str) -> None:
         """
@@ -56,8 +57,13 @@ class shared:
         print("success")
         """
         # Use sys.executable instead of "python" to ensure we use the correct Python interpreter
-        process = subprocess.Popen([sys.executable, "-"], stdin=subprocess.PIPE, text=True,
-                                   stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+        process = subprocess.Popen(
+            [sys.executable, "-"],
+            stdin=subprocess.PIPE,
+            text=True,
+            stderr=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+        )
         stdout, stderr = process.communicate(dedent(code))
         if process.returncode or stdout.strip() != "success":
             raise RuntimeError(f"'{path}' cannot be unpickled: \n{stderr}")

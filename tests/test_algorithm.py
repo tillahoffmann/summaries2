@@ -5,8 +5,12 @@ from sklearn.exceptions import NotFittedError
 from summaries.algorithm import NearestNeighborAlgorithm
 
 
-def test_posterior_mean_correlation(simulated_data: np.ndarray, simulated_params: np.ndarray,
-                                    observed_data: np.ndarray, latent_params: np.ndarray) -> None:
+def test_posterior_mean_correlation(
+    simulated_data: np.ndarray,
+    simulated_params: np.ndarray,
+    observed_data: np.ndarray,
+    latent_params: np.ndarray,
+) -> None:
     sampler = NearestNeighborAlgorithm(frac=0.001).fit(simulated_data, simulated_params)
     posterior_mean = sampler.predict(observed_data).mean(axis=1)
     pearsonr = stats.pearsonr(posterior_mean.ravel(), latent_params.ravel())

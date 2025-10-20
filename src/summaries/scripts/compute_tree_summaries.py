@@ -21,20 +21,24 @@ def __main__(argv: List[str] | None = None) -> None:
     observed_data = observed["data"]
 
     summaries = []
-    for predecessors in tqdm(observed_data, desc="evaluate tree kernel summary candidates"):
+    for predecessors in tqdm(
+        observed_data, desc="evaluate tree kernel summary candidates"
+    ):
         tree = nk.graphtools.toUndirected(expand_tree(predecessors, use="networkit"))
         in_degrees = np.bincount(predecessors, minlength=observed_data.shape[-1] + 1)
         betweenness = nk.centrality.Betweenness(tree)
         betweenness.run()
         diameter = nk.distance.Diameter(tree)
         diameter.run()
-        summaries.append((
-            in_degrees.std(),
-            evaluate_gini(in_degrees),
-            max(betweenness.scores()),
-            diameter.getDiameter()[0],
-            np.random.uniform(0, 1),
-        ))
+        summaries.append(
+            (
+                in_degrees.std(),
+                evaluate_gini(in_degrees),
+                max(betweenness.scores()),
+                diameter.getDiameter()[0],
+                np.random.uniform(0, 1),
+            )
+        )
     summaries = np.asarray(summaries)
 
     dump_pickle(observed | {"data": summaries}, args.output)

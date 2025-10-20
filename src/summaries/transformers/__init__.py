@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 from .base import as_transformer, Transformer
-from .subset_selection import ApproximateSufficiencyTransformer, \
-    MinimumConditionalEntropyTransformer
+from .subset_selection import (
+    ApproximateSufficiencyTransformer,
+    MinimumConditionalEntropyTransformer,
+)
 from .projection import NeuralTransformer
 
 

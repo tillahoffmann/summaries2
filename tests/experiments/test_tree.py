@@ -3,8 +3,13 @@ import numpy as np
 import pytest
 from scipy import stats
 from sklearn.exceptions import NotFittedError
-from summaries.experiments.tree import compress_tree, evaluate_gini, expand_tree, simulate_tree, \
-    TreeKernelPosterior
+from summaries.experiments.tree import (
+    compress_tree,
+    evaluate_gini,
+    expand_tree,
+    simulate_tree,
+    TreeKernelPosterior,
+)
 
 
 def test_compress_expand_tree() -> None:

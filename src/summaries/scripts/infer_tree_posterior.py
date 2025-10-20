@@ -21,7 +21,9 @@ class InferTreePosteriorArgs:
 
 def __main__(argv: List[str] | None = None) -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--n-samples", type=int, help="number of posterior samples to draw")
+    parser.add_argument(
+        "--n-samples", type=int, help="number of posterior samples to draw"
+    )
     parser.add_argument("observed", help="path to observed data", type=Path)
     parser.add_argument("output", help="path to output file", type=Path)
     args: InferTreePosteriorArgs = parser.parse_args(argv)
@@ -37,7 +39,9 @@ def __main__(argv: List[str] | None = None) -> None:
         n_observed = len(observed["data"])
 
     result = {}
-    for gamma, predecessors in tqdm(zip(observed["params"], observed["data"]), total=n_observed):
+    for gamma, predecessors in tqdm(
+        zip(observed["params"], observed["data"]), total=n_observed
+    ):
         tree = nx.to_undirected(expand_tree(predecessors))
         posterior = TreeKernelPosterior(prior).fit(tree)
         log_prob = posterior.log_prob(lin)
@@ -47,7 +51,9 @@ def __main__(argv: List[str] | None = None) -> None:
             # is necessary in rare cases because the normalization evaluated using `quad` in the
             # `fit` method of `TreeKernelPosterior` may differ numerically from the `trapz`
             # integration used by `sample_empirical_pdf`.
-            samples = sample_empirical_pdf(lin, np.exp(log_prob), args.n_samples, tol=0.1)
+            samples = sample_empirical_pdf(
+                lin, np.exp(log_prob), args.n_samples, tol=0.1
+            )
             # Store and add trailing dimension for consistency with multivariate problems.
             result.setdefault("samples", []).append(samples[..., None])
 
@@ -57,7 +63,9 @@ def __main__(argv: List[str] | None = None) -> None:
 
         # Record the Spearman rank correlation between inferred and actual history.
         histories = np.asarray(posterior._sampler.get_histories())
-        spearman = stats.spearmanr(np.arange(histories.shape[1]), histories.mean(axis=0))
+        spearman = stats.spearmanr(
+            np.arange(histories.shape[1]), histories.mean(axis=0)
+        )
         result.setdefault("spearman", []).append(spearman.statistic)
 
     result = {key: np.asarray(value) for key, value in result.items()}

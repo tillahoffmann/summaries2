@@ -22,7 +22,9 @@ def __main__(argv: List[str] | None = None) -> None:
         handler.setLevel(logging.ERROR)
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--n-samples", type=int, help="number of posterior samples", default=1000)
+    parser.add_argument(
+        "--n-samples", type=int, help="number of posterior samples", default=1000
+    )
     parser.add_argument("observed", type=Path, help="observed data path")
     parser.add_argument("output", type=Path, help="output path")
     args: Args = parser.parse_args(argv)
@@ -31,14 +33,19 @@ def __main__(argv: List[str] | None = None) -> None:
         observed = pickle.load(fp)
 
     chains = 4
-    model = cmdstanpy.CmdStanModel(stan_file=Path(__file__).parent / "infer_benchmark.stan")
+    model = cmdstanpy.CmdStanModel(
+        stan_file=Path(__file__).parent / "infer_benchmark.stan"
+    )
 
     samples = []
     for i, x in enumerate(tqdm(observed["data"].squeeze())):
         # Drop all but the first column (the rest contains white noise).
         fit = model.sample(
-            {"x": x[:, 0], "n_observations": x.shape[0], "variance_offset": 1}, chains=chains,
-            iter_sampling=args.n_samples, show_progress=False, adapt_delta=0.99,
+            {"x": x[:, 0], "n_observations": x.shape[0], "variance_offset": 1},
+            chains=chains,
+            iter_sampling=args.n_samples,
+            show_progress=False,
+            adapt_delta=0.99,
         )
         diagnosis = fit.diagnose()
         if "no problems detected" not in diagnosis:
@@ -46,11 +53,14 @@ def __main__(argv: List[str] | None = None) -> None:
         samples.append(fit.theta[::chains, None])
 
     with open(args.output, "wb") as fp:
-        pickle.dump({
-            "args": vars(args),
-            "samples": np.asarray(samples),
-            "params": observed["params"],
-        }, fp)
+        pickle.dump(
+            {
+                "args": vars(args),
+                "samples": np.asarray(samples),
+                "params": observed["params"],
+            },
+            fp,
+        )
 
 
 if __name__ == "__main__":

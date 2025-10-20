@@ -18,8 +18,15 @@ class NearestNeighborAlgorithm(BaseEstimator):
         minkowski_norm: Minkowski p-norm to use for queries (defaults to Euclidean distances).
         **kdtree_kwargs: Keyword arguments passed to the KDTree constructor.
     """
-    def __init__(self, *, frac: float | None = None, n_samples: int | None = None,
-                 minkowski_norm: float = 2, **kdtree_kwargs) -> None:
+
+    def __init__(
+        self,
+        *,
+        frac: float | None = None,
+        n_samples: int | None = None,
+        minkowski_norm: float = 2,
+        **kdtree_kwargs,
+    ) -> None:
         super().__init__()
         if (frac is None) == (n_samples is None):
             raise ValueError("Exactly one of `frac` and `n_samples` must be given.")

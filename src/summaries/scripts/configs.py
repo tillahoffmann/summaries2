@@ -42,7 +42,9 @@ class TreeSimulationConfig(SimulationConfig):
 
         # Reshape to match the shape expected by subsequent steps.
         simulations["data"] = np.asarray(simulations["data"], dtype=np.int16)
-        simulations["params"] = np.asarray(simulations["params"]).reshape((n_samples, 1))
+        simulations["params"] = np.asarray(simulations["params"]).reshape(
+            (n_samples, 1)
+        )
         return simulations
 
 

@@ -11,8 +11,14 @@ def test_compute_tree_summaries(tmp_path: Path) -> None:
     observed_path = tmp_path / "observed.pkl"
     output_path = tmp_path / "output.pkl"
 
-    __main__simulate_data([f"--n-samples={n}", "--n-observations=17", "TreeSimulationConfig",
-                           str(observed_path)])
+    __main__simulate_data(
+        [
+            f"--n-samples={n}",
+            "--n-observations=17",
+            "TreeSimulationConfig",
+            str(observed_path),
+        ]
+    )
     __main__([str(observed_path), str(output_path)])
 
     with observed_path.open("rb") as fp:

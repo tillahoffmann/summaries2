@@ -3,36 +3,51 @@ import pytest
 from sklearn.cross_decomposition import PLSRegression
 from sklearn.exceptions import NotFittedError
 from sklearn.linear_model import LinearRegression
-from summaries.transformers import ApproximateSufficiencyTransformer, as_transformer, \
-    MinimumConditionalEntropyTransformer, NeuralTransformer
+from summaries.transformers import (
+    ApproximateSufficiencyTransformer,
+    as_transformer,
+    MinimumConditionalEntropyTransformer,
+    NeuralTransformer,
+)
 from summaries.transformers.base import _DataDependentTransformerMixin, Transformer
 import torch
 from torch.nn import Identity
 from typing import Dict, Type
 
 
-@pytest.mark.parametrize("transformer_cls, kwargs", [
-    (as_transformer(LinearRegression), {"fit_intercept": False}),
-    (MinimumConditionalEntropyTransformer, {"frac": 0.01}),
-    (ApproximateSufficiencyTransformer, {"frac": 0.01}),
-    (ApproximateSufficiencyTransformer, {"frac": 0.01, "range_": (-1, 1)}),
-    (ApproximateSufficiencyTransformer, {"frac": 0.01, "likelihood_ratio": True}),
-    (NeuralTransformer, {"transformer": Identity()}),
-    # This isn't implemented here, but we test it to see if it fits into the framework.
-    (PLSRegression, {}),
-])
-def test_transformer(transformer_cls: Type[Transformer], kwargs: Dict, simulated_data: np.ndarray,
-                     simulated_params: np.ndarray, observed_data: np.ndarray) -> None:
-
+@pytest.mark.parametrize(
+    "transformer_cls, kwargs",
+    [
+        (as_transformer(LinearRegression), {"fit_intercept": False}),
+        (MinimumConditionalEntropyTransformer, {"frac": 0.01}),
+        (ApproximateSufficiencyTransformer, {"frac": 0.01}),
+        (ApproximateSufficiencyTransformer, {"frac": 0.01, "range_": (-1, 1)}),
+        (ApproximateSufficiencyTransformer, {"frac": 0.01, "likelihood_ratio": True}),
+        (NeuralTransformer, {"transformer": Identity()}),
+        # This isn't implemented here, but we test it to see if it fits into the framework.
+        (PLSRegression, {}),
+    ],
+)
+def test_transformer(
+    transformer_cls: Type[Transformer],
+    kwargs: Dict,
+    simulated_data: np.ndarray,
+    simulated_params: np.ndarray,
+    observed_data: np.ndarray,
+) -> None:
     # Create the transformer and verify it does not transform without fitting (except pretrained
     # neural transformers).
-    if isinstance(transformer_cls, Type) \
-            and issubclass(transformer_cls, _DataDependentTransformerMixin):
+    if isinstance(transformer_cls, Type) and issubclass(
+        transformer_cls, _DataDependentTransformerMixin
+    ):
         kwargs["observed_data"] = observed_data[0]
     transformer = transformer_cls(**kwargs)
 
     # Skip multidimensional data for approximate sufficiency.
-    if isinstance(transformer, ApproximateSufficiencyTransformer) and simulated_params.shape[1] > 1:
+    if (
+        isinstance(transformer, ApproximateSufficiencyTransformer)
+        and simulated_params.shape[1] > 1
+    ):
         pytest.skip("approximate sufficiency only supports one-dimensional parameters")
 
     if not isinstance(transformer, NeuralTransformer):

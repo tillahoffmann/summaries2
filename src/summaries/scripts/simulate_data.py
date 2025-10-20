@@ -4,8 +4,12 @@ from pathlib import Path
 import pickle
 from typing import List
 
-from .configs import SimulationArgs, SimulationConfig, TreeSimulationConfig, \
-    BenchmarkSimulationConfig
+from .configs import (
+    SimulationArgs,
+    SimulationConfig,
+    TreeSimulationConfig,
+    BenchmarkSimulationConfig,
+)
 
 
 SIMULATION_CONFIGS = [
@@ -18,11 +22,16 @@ SIMULATION_CONFIGS = {config.__name__: config for config in SIMULATION_CONFIGS}
 def __main__(argv: List[str] | None = None) -> None:
     start = datetime.now()
     parser = argparse.ArgumentParser("simulate_data")
-    parser.add_argument("--n-samples", type=int, help="override the number of samples generated")
-    parser.add_argument("--n-observations", type=int, help="number of observations per sample")
+    parser.add_argument(
+        "--n-samples", type=int, help="override the number of samples generated"
+    )
+    parser.add_argument(
+        "--n-observations", type=int, help="number of observations per sample"
+    )
     parser.add_argument("--seed", type=int, help="random number generator seed")
-    parser.add_argument("config", help="configuration for simulating data",
-                        choices=SIMULATION_CONFIGS)
+    parser.add_argument(
+        "config", help="configuration for simulating data", choices=SIMULATION_CONFIGS
+    )
     parser.add_argument("output", type=Path, help="path to output file")
     args: SimulationArgs = parser.parse_args(argv)
 
@@ -30,12 +39,10 @@ def __main__(argv: List[str] | None = None) -> None:
     simulations = config.simulate()
 
     with args.output.open("wb") as fp:
-        pickle.dump({
-            "start": start,
-            "end": datetime.now(),
-            "args": vars(args),
-            **simulations
-        }, fp)
+        pickle.dump(
+            {"start": start, "end": datetime.now(), "args": vars(args), **simulations},
+            fp,
+        )
 
 
 if __name__ == "__main__":

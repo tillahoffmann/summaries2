@@ -16,15 +16,25 @@ class Args:
 
 
 def _parse_bounds(bounds: str) -> np.ndarray:
-    return None if bounds == "none" else np.reshape([float(x) for x in bounds.split(",")], (-1, 2))
+    return (
+        None
+        if bounds == "none"
+        else np.reshape([float(x) for x in bounds.split(",")], (-1, 2))
+    )
 
 
 def __main__(argv: List[str] | None = None) -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--bounds", type=_parse_bounds, help="bounds for kernel density estimation")
-    parser.add_argument("--sigfigs", type=int, help="number of significant figures for statistics")
+    parser.add_argument(
+        "--bounds", type=_parse_bounds, help="bounds for kernel density estimation"
+    )
+    parser.add_argument(
+        "--sigfigs", type=int, help="number of significant figures for statistics"
+    )
     parser.add_argument("--csv", type=Path, help="path to CSV output file")
-    parser.add_argument("results", type=Path, nargs="+", help="path to posterior samples")
+    parser.add_argument(
+        "results", type=Path, nargs="+", help="path to posterior samples"
+    )
     args: Args = parser.parse_args(argv)
 
     statistics = []
@@ -42,7 +52,9 @@ def __main__(argv: List[str] | None = None) -> None:
         err_factor = 1 / np.sqrt(n_examples - 1)
 
         # Evaluate the root mean squared error.
-        residuals = observed_params[:, None, :] - samples  # Shape (n_examples, n_samples, n_params)
+        residuals = (
+            observed_params[:, None, :] - samples
+        )  # Shape (n_examples, n_samples, n_params)
         mises = np.square(residuals).sum(2).mean(1)
         mise = np.mean(mises)
         mise_err = np.std(mises) * err_factor
@@ -55,35 +67,36 @@ def __main__(argv: List[str] | None = None) -> None:
         nlps = []
         for x, xs in zip(observed_params, samples):
             estimator = GaussianKernelDensity(bounds=args.bounds).fit(xs)
-            nlp, = - estimator.score_samples([x])
+            (nlp,) = -estimator.score_samples([x])
             nlps.append(nlp)
         nlps = np.asarray(nlps)
         assert nlps.shape == (n_examples,)
         nlp = np.mean(nlps)
         nlp_err = np.std(nlps) * err_factor
 
-        statistics.append({
-            "path": path.name,
-
-            "nlp": nlp,
-            "nlp_err": nlp_err,
-
-            "rmise": rmise,
-            "rmise_err": rmise_err,
-
-            "mise": mise,
-            "mise_err": mise_err,
-        })
+        statistics.append(
+            {
+                "path": path.name,
+                "nlp": nlp,
+                "nlp_err": nlp_err,
+                "rmise": rmise,
+                "rmise_err": rmise_err,
+                "mise": mise,
+                "mise_err": mise_err,
+            }
+        )
     statistics = pd.DataFrame(statistics).sort_values("nlp")
     if args.csv:
         statistics.to_csv(args.csv, index=False)
 
     for key in ["rmise", "nlp"]:
-        sigfigs = args.sigfigs or int(np.ceil(-np.log10(statistics[f"{key}_err"])).max())
+        sigfigs = args.sigfigs or int(
+            np.ceil(-np.log10(statistics[f"{key}_err"])).max()
+        )
         statistics[f"{key}_err"] = statistics[f"{key}_err"].round(sigfigs)
         statistics[key] = statistics[key].round(sigfigs)
 
-    pd.set_option('display.max_colwidth', None)
+    pd.set_option("display.max_colwidth", None)
     print(statistics)
 
 

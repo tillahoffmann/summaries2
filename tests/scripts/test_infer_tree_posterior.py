@@ -12,8 +12,14 @@ def test_infer_tree_posterior(tmp_path: Path) -> None:
     observed_path = tmp_path / "observed.pkl"
     output_path = tmp_path / "output.pkl"
 
-    __main__simulate_data([f"--n-samples={n}", "--n-observations=17", "TreeSimulationConfig",
-                           str(observed_path)])
+    __main__simulate_data(
+        [
+            f"--n-samples={n}",
+            "--n-observations=17",
+            "TreeSimulationConfig",
+            str(observed_path),
+        ]
+    )
     __main__(["--n-samples=13", str(observed_path), str(output_path)])
 
     with observed_path.open("rb") as fp:
@@ -25,7 +31,9 @@ def test_infer_tree_posterior(tmp_path: Path) -> None:
     # Check true and inferred are correlated.
     assert observed["params"].shape == (n, 1)
     assert output["map_estimate"].shape == (n, 1)
-    pearsonr = stats.pearsonr(observed["params"].ravel(), output["map_estimate"].ravel())
+    pearsonr = stats.pearsonr(
+        observed["params"].ravel(), output["map_estimate"].ravel()
+    )
     assert pearsonr.statistic > 0.5
     assert pearsonr.pvalue < 1e-2
 

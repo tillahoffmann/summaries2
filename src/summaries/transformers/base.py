@@ -9,11 +9,12 @@ class Transformer:
     """
     Type stub for sklearn transformers.
     """
-    def fit(self, X: Any, y: Optional[Any] = None) -> Transformer:
-        ...  # pragma: no cover
 
-    def transform(self, X: Any) -> Any:
-        ...  # pragma: no cover
+    def fit(
+        self, X: Any, y: Optional[Any] = None
+    ) -> Transformer: ...  # pragma: no cover
+
+    def transform(self, X: Any) -> Any: ...  # pragma: no cover
 
 
 T = TypeVar("T")
@@ -40,8 +41,10 @@ class _PredictorTransformer(BaseEstimator):
     Use a predictor (https://scikit-learn.org/stable/glossary.html#term-predictor) as a trainable,
     supervised transformer.
     """
-    def __init__(self, cls: Type[BaseEstimator], *, _method: str | None = None, **kwargs: Any) \
-            -> None:
+
+    def __init__(
+        self, cls: Type[BaseEstimator], *, _method: str | None = None, **kwargs: Any
+    ) -> None:
         self.cls = cls
         self.kwargs = kwargs
         self.predictor = self.cls(**self.kwargs)
@@ -66,10 +69,12 @@ class _DataDependentTransformerMixin(BaseEstimator):
     Args:
         observed_data: Vector of raw data or summaries.
     """
+
     def __init__(self, observed_data: np.ndarray) -> None:
         super().__init__()
         self.observed_data = np.asarray(observed_data)
         if self.observed_data.ndim != 1:
-            raise ValueError("Observed data must be a vector; got shape "
-                             f"{self.observed_data.shape}.")
-        self.n_features_in_, = self.observed_data.shape
+            raise ValueError(
+                f"Observed data must be a vector; got shape {self.observed_data.shape}."
+            )
+        (self.n_features_in_,) = self.observed_data.shape

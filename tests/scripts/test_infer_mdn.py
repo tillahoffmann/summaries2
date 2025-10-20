@@ -19,15 +19,21 @@ def test_infer_mdn(tmp_path: Path, observed_data: np.ndarray) -> None:
     params = np.random.normal(0, 1, (observed_data.shape[0], 2))
 
     with observed_path.open("wb") as fp:
-        pickle.dump({
-            "data": observed_data,
-            "params": params,
-        }, fp)
+        pickle.dump(
+            {
+                "data": observed_data,
+                "params": params,
+            },
+            fp,
+        )
 
     with mdn_path.open("wb") as fp:
-        pickle.dump({
-            "transformer": DummyModule(),
-        }, fp)
+        pickle.dump(
+            {
+                "transformer": DummyModule(),
+            },
+            fp,
+        )
 
     __main__(["--n-samples=17", str(mdn_path), str(observed_path), str(output_path)])
 

@@ -26,8 +26,12 @@ def estimate_entropy(x: np.ndarray, k: int = 4) -> float:
     distance = distance[:, -1]
 
     # Estimate the entropy.
-    entropy = p * np.log(np.pi) / 2 - special.gammaln(p / 2 + 1) - special.digamma(k) + p \
-        * np.log(distance).mean()
+    entropy = (
+        p * np.log(np.pi) / 2
+        - special.gammaln(p / 2 + 1)
+        - special.digamma(k)
+        + p * np.log(distance).mean()
+    )
     return entropy + np.log(n)
 
 
@@ -38,7 +42,7 @@ def estimate_divergence(x: np.ndarray, y: np.ndarray, k: int = 4):
     # Validate input.
     n, p = x.shape
     m, q = y.shape
-    assert p == q, 'x and y must have the same trailing dimension'
+    assert p == q, "x and y must have the same trailing dimension"
 
     # Build nearest neighbor trees and query distances.
     xtree = KDTree(x)
@@ -52,7 +56,8 @@ def estimate_divergence(x: np.ndarray, y: np.ndarray, k: int = 4):
 
 
 def estimate_mutual_information(
-        x: np.ndarray, y: np.ndarray, normalize: Union[bool, str] = False) -> float:
+    x: np.ndarray, y: np.ndarray, normalize: Union[bool, str] = False
+) -> float:
     """
     Estimate the mutual information between two variables.
 
@@ -73,11 +78,11 @@ def estimate_mutual_information(
     entropy_y = estimate_entropy(y)
     entropy_xy = estimate_entropy(np.hstack([x, y]))
     mi = entropy_x + entropy_y - entropy_xy
-    if normalize == 'x':
+    if normalize == "x":
         mi /= entropy_x
-    elif normalize == 'y':
+    elif normalize == "y":
         mi /= entropy_y
-    elif normalize == 'xy':
+    elif normalize == "xy":
         mi /= (entropy_x + entropy_y) / 2
     elif normalize:
         raise NotImplementedError(normalize)

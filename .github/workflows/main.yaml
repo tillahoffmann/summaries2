@@ -36,7 +36,7 @@ jobs:
       - name: Install cmdstan
         run: uv run python -m cmdstanpy.install_cmdstan --version ${{ env.cmdstanVersion }}
       - name: Lint the code
-        run: true
+        run: uv run ruff format --check
       - name: Run test_infer_mdn_tree separately
         run: uv run pytest tests/scripts/test_infer_mdn_tree.py --cov=summaries --cov-report=term-missing
       - name: Run all other tests

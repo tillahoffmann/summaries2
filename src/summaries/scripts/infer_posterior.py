@@ -18,8 +18,13 @@ from typing import Any, Dict, List
 
 from ..algorithm import NearestNeighborAlgorithm
 from ..experiments.tree import predecessors_to_datasets
-from ..transformers import ApproximateSufficiencyTransformer, as_transformer, \
-    MinimumConditionalEntropyTransformer, NeuralTransformer, Transformer
+from ..transformers import (
+    ApproximateSufficiencyTransformer,
+    as_transformer,
+    MinimumConditionalEntropyTransformer,
+    NeuralTransformer,
+    Transformer,
+)
 from .base import resolve_path
 
 
@@ -36,6 +41,7 @@ class InferenceConfig:
     """
     Base class for inference configurations.
     """
+
     N_SAMPLES: float | None = None
     IS_DATA_DEPENDENT: bool = False
 
@@ -73,8 +79,9 @@ class CoalescentMinimumConditionalEntropyConfig(CoalescentConfig):
     IS_DATA_DEPENDENT = True
 
     def create_transformer(self, observed_data: np.ndarray) -> Transformer:
-        return MinimumConditionalEntropyTransformer(observed_data, n_samples=self.n_samples,
-                                                    thin=10)
+        return MinimumConditionalEntropyTransformer(
+            observed_data, n_samples=self.n_samples, thin=10
+        )
 
 
 class CoalescentLinearPosteriorMeanConfig(CoalescentConfig):
@@ -103,10 +110,12 @@ class BenchmarkConfig(InferenceConfig):
     N_SAMPLES = 1_000
 
     def create_preprocessor(self) -> Transformer:
-        return Pipeline([
-            ("candidate_summaries", FunctionTransformer(self._evaluate_summaries)),
-            ("standardize", StandardScaler()),
-        ])
+        return Pipeline(
+            [
+                ("candidate_summaries", FunctionTransformer(self._evaluate_summaries)),
+                ("standardize", StandardScaler()),
+            ]
+        )
 
     def _evaluate_summaries(self, observed_data: np.ndarray) -> np.ndarray:
         # The dataset has shape (n_examples, n_observations, 1 + n_noise_features), and we evaluate
@@ -129,24 +138,31 @@ class BenchmarkMinimumConditionalEntropyConfig(BenchmarkConfig):
     IS_DATA_DEPENDENT = True
 
     def create_transformer(self, observed_data: np.ndarray) -> Transformer:
-        return MinimumConditionalEntropyTransformer(observed_data, n_samples=self.n_samples,
-                                                    thin=10)
+        return MinimumConditionalEntropyTransformer(
+            observed_data, n_samples=self.n_samples, thin=10
+        )
 
 
 class BenchmarkApproximateSufficiencyConfig(BenchmarkConfig):
     IS_DATA_DEPENDENT = True
 
     def create_transformer(self, observed_data: Any | None = None) -> Transformer:
-        return ApproximateSufficiencyTransformer(observed_data, n_samples=self.n_samples,
-                                                 range_=(-3, 3), thin=10)
+        return ApproximateSufficiencyTransformer(
+            observed_data, n_samples=self.n_samples, range_=(-3, 3), thin=10
+        )
 
 
 class BenchmarkApproximateSufficiencyLikelihoodRatioConfig(BenchmarkConfig):
     IS_DATA_DEPENDENT = True
 
     def create_transformer(self, observed_data: Any | None = None) -> Transformer:
-        return ApproximateSufficiencyTransformer(observed_data, n_samples=self.n_samples, thin=10,
-                                                 likelihood_ratio=True, range_=(-3, 3))
+        return ApproximateSufficiencyTransformer(
+            observed_data,
+            n_samples=self.n_samples,
+            thin=10,
+            likelihood_ratio=True,
+            range_=(-3, 3),
+        )
 
 
 class BenchmarkLinearPosteriorMeanConfig(BenchmarkConfig):
@@ -187,6 +203,7 @@ class TreeKernelExpertSummaryConfig(TreeKernelConfig):
     """
     Draw samples using "expert" summary statistics designed for growing trees after standardizing.
     """
+
     def create_preprocessor(self) -> Transformer:
         return StandardScaler()
 
@@ -208,23 +225,32 @@ class TreeKernelMinimumConditionalEntropyConfig(TreeKernelExpertSummaryConfig):
     IS_DATA_DEPENDENT = True
 
     def create_transformer(self, observed_data: Any | None = None) -> Transformer:
-        return MinimumConditionalEntropyTransformer(observed_data, n_samples=self.n_samples)
+        return MinimumConditionalEntropyTransformer(
+            observed_data, n_samples=self.n_samples
+        )
 
 
 class TreeKernelApproximateSufficiencyConfig(TreeKernelExpertSummaryConfig):
     IS_DATA_DEPENDENT = True
 
     def create_transformer(self, observed_data: Any | None = None) -> Transformer:
-        return ApproximateSufficiencyTransformer(observed_data, range_=(0, 2),
-                                                 n_samples=self.n_samples)
+        return ApproximateSufficiencyTransformer(
+            observed_data, range_=(0, 2), n_samples=self.n_samples
+        )
 
 
-class TreeKernelApproximateSufficiencyLikelihoodRatioConfig(TreeKernelExpertSummaryConfig):
+class TreeKernelApproximateSufficiencyLikelihoodRatioConfig(
+    TreeKernelExpertSummaryConfig
+):
     IS_DATA_DEPENDENT = True
 
     def create_transformer(self, observed_data: Any | None = None) -> Transformer:
-        return ApproximateSufficiencyTransformer(observed_data, range_=(0, 2),
-                                                 n_samples=self.n_samples, likelihood_ratio=True)
+        return ApproximateSufficiencyTransformer(
+            observed_data,
+            range_=(0, 2),
+            n_samples=self.n_samples,
+            likelihood_ratio=True,
+        )
 
 
 class TreeKernelNeuralConfig(TreeKernelConfig):
@@ -237,7 +263,7 @@ class TreeKernelNeuralConfig(TreeKernelConfig):
 
     def _predecessors_to_batch(self, data: np.ndarray) -> torch_geometric.data.Data:
         datasets = predecessors_to_datasets(data)
-        data, = torch_geometric.loader.DataLoader(datasets, batch_size=len(datasets))
+        (data,) = torch_geometric.loader.DataLoader(datasets, batch_size=len(datasets))
         return data
 
 
@@ -249,13 +275,11 @@ INFERENCE_CONFIGS = [
     BenchmarkMinimumConditionalEntropyConfig,
     BenchmarkNeuralConfig,
     BenchmarkPLSConfig,
-
     CoalescentExpertSummaryConfig,
     CoalescentLinearPosteriorMeanConfig,
     CoalescentMinimumConditionalEntropyConfig,
     CoalescentNeuralConfig,
     CoalescentPLSConfig,
-
     TreeKernelApproximateSufficiencyConfig,
     TreeKernelApproximateSufficiencyLikelihoodRatioConfig,
     TreeKernelExpertSummaryConfig,
@@ -263,32 +287,45 @@ INFERENCE_CONFIGS = [
     TreeKernelMinimumConditionalEntropyConfig,
     TreeKernelNeuralConfig,
     TreeKernelPLSConfig,
-
     PriorConfig,
 ]
 INFERENCE_CONFIGS = {config.__name__: config for config in INFERENCE_CONFIGS}
 
 
-def _build_pipeline(config: InferenceConfig, observed_data: Any | None = None) -> Pipeline:
+def _build_pipeline(
+    config: InferenceConfig, observed_data: Any | None = None
+) -> Pipeline:
     transformer = config.create_transformer(observed_data=observed_data)
-    return Pipeline([
-        ("transform", transformer),
-        ("standardize", StandardScaler()),
-        ("sample", NearestNeighborAlgorithm(n_samples=config.n_samples)),
-    ])
+    return Pipeline(
+        [
+            ("transform", transformer),
+            ("standardize", StandardScaler()),
+            ("sample", NearestNeighborAlgorithm(n_samples=config.n_samples)),
+        ]
+    )
 
 
 def __main__(argv: List[str] | None = None) -> None:
     start = datetime.now()
     parser = ArgumentParser("infer")
-    parser.add_argument("--n-samples", type=int, help="number of posterior samples to draw")
-    parser.add_argument("--transformer-kwargs", type=json.loads, default={},
-                        help="keyword arguments for the transformer encoded as json")
-    parser.add_argument("config", help="inference configuration to run", choices=INFERENCE_CONFIGS)
-    parser.add_argument("simulated", help="path to simulated data and parameters",
-                        type=resolve_path)
-    parser.add_argument("observed", help="path to observed data and parameters",
-                        type=resolve_path)
+    parser.add_argument(
+        "--n-samples", type=int, help="number of posterior samples to draw"
+    )
+    parser.add_argument(
+        "--transformer-kwargs",
+        type=json.loads,
+        default={},
+        help="keyword arguments for the transformer encoded as json",
+    )
+    parser.add_argument(
+        "config", help="inference configuration to run", choices=INFERENCE_CONFIGS
+    )
+    parser.add_argument(
+        "simulated", help="path to simulated data and parameters", type=resolve_path
+    )
+    parser.add_argument(
+        "observed", help="path to observed data and parameters", type=resolve_path
+    )
     parser.add_argument("output", help="path to output file", type=resolve_path)
     args: Args = parser.parse_args(argv)
 
@@ -324,13 +361,16 @@ def __main__(argv: List[str] | None = None) -> None:
             samples = pipeline.predict(observed["data"])
 
     with args.output.open("wb") as fp:
-        pickle.dump({
-            "args": vars(args),
-            "start": start,
-            "end": datetime.now(),
-            "samples": samples,
-            "params": observed["params"],
-        }, fp)
+        pickle.dump(
+            {
+                "args": vars(args),
+                "start": start,
+                "end": datetime.now(),
+                "samples": samples,
+                "params": observed["params"],
+            },
+            fp,
+        )
 
 
 if __name__ == "__main__":

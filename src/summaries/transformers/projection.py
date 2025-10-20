@@ -16,8 +16,13 @@ class NeuralTransformer(Module, BaseEstimator):
         data_as_tensor: Cast data to tensors.
         batch_size: Size of batches to be used for transforming data.
     """
-    def __init__(self, transformer: Module, data_as_tensor: bool = True,
-                 batch_size: int | None = None) -> None:
+
+    def __init__(
+        self,
+        transformer: Module,
+        data_as_tensor: bool = True,
+        batch_size: int | None = None,
+    ) -> None:
         super().__init__()
         self.transformer = transformer
         self.data_as_tensor = data_as_tensor
@@ -41,6 +46,10 @@ class NeuralTransformer(Module, BaseEstimator):
 
         # We need tensor input for batched transforms.
         if not torch.is_tensor(data):
-            raise TypeError(f"data must be a tensor for batched transformations; got {type(data)}")
-        loader = TensorDataLoader(TensorDataset(data), batch_size=batch_size, shuffle=False)
+            raise TypeError(
+                f"data must be a tensor for batched transformations; got {type(data)}"
+            )
+        loader = TensorDataLoader(
+            TensorDataset(data), batch_size=batch_size, shuffle=False
+        )
         return torch.concatenate([self.transformer(*batch) for batch in loader], axis=0)

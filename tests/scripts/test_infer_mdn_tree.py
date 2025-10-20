@@ -1,4 +1,5 @@
 """Test for MDN tree inference."""
+
 import pickle
 from pathlib import Path
 import torch
@@ -15,18 +16,31 @@ def test_infer_mdn_tree(tmp_path: Path) -> None:
     params = torch.randn(7, 2)
 
     with observed_path.open("wb") as fp:
-        pickle.dump({
-            "data": observed_data,
-            "params": params,
-        }, fp)
+        pickle.dump(
+            {
+                "data": observed_data,
+                "params": params,
+            },
+            fp,
+        )
 
     with mdn_path.open("wb") as fp:
-        pickle.dump({
-            "transformer": TreePosteriorMixtureDensityTransformer(),
-        }, fp)
+        pickle.dump(
+            {
+                "transformer": TreePosteriorMixtureDensityTransformer(),
+            },
+            fp,
+        )
 
-    __main__(["--n-samples=17", "--loader=tree", str(mdn_path), str(observed_path),
-              str(output_path)])
+    __main__(
+        [
+            "--n-samples=17",
+            "--loader=tree",
+            str(mdn_path),
+            str(observed_path),
+            str(output_path),
+        ]
+    )
 
     with output_path.open("rb") as fp:
         output = pickle.load(fp)

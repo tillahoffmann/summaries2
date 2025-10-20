@@ -20,10 +20,18 @@ class Args:
 
 def __main__(argv: List[str] | None = None) -> None:
     parser = argparse.ArgumentParser("infer_mdn")
-    parser.add_argument("--n-samples", help="number of samples to draw", type=int, default=1000)
-    parser.add_argument("--loader", choices={"raw", "tree"}, help="data loader", default="raw")
-    parser.add_argument("mdn", help="path to trained mixture density network", type=Path)
-    parser.add_argument("observed", help="path to observed data and parameters", type=Path)
+    parser.add_argument(
+        "--n-samples", help="number of samples to draw", type=int, default=1000
+    )
+    parser.add_argument(
+        "--loader", choices={"raw", "tree"}, help="data loader", default="raw"
+    )
+    parser.add_argument(
+        "mdn", help="path to trained mixture density network", type=Path
+    )
+    parser.add_argument(
+        "observed", help="path to observed data and parameters", type=Path
+    )
     parser.add_argument("output", help="path to output file", type=Path)
     args: Args = parser.parse_args(argv)
 
@@ -38,7 +46,9 @@ def __main__(argv: List[str] | None = None) -> None:
         observed_data = as_tensor(observed_data, dtype=get_default_dtype())
     elif args.loader == "tree":
         datasets = predecessors_to_datasets(observed_data)
-        observed_data, = torch_geometric.loader.DataLoader(datasets, batch_size=len(datasets))
+        (observed_data,) = torch_geometric.loader.DataLoader(
+            datasets, batch_size=len(datasets)
+        )
     else:
         raise NotImplementedError(args.loader)
 
@@ -50,11 +60,9 @@ def __main__(argv: List[str] | None = None) -> None:
     samples = posterior.sample([args.n_samples]).moveaxis(1, 0).numpy()
 
     with args.output.open("wb") as fp:
-        pickle.dump({
-            "args": vars(args),
-            "samples": samples,
-            "params": observed["params"]
-        }, fp)
+        pickle.dump(
+            {"args": vars(args), "samples": samples, "params": observed["params"]}, fp
+        )
 
 
 if __name__ == "__main__":

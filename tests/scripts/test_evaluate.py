@@ -12,10 +12,15 @@ def test_evaluate(tmp_path: Path, bounds: str | None) -> None:
     paths = []
     for offset in [0, 3]:
         path = tmp_path / f"{offset}.pkl"
-        util.dump_pickle({
-            "params": reference,
-            "samples": reference[:, None, :] + offset + np.random.normal(0, 1, (100, 1000, 3))
-        }, path)
+        util.dump_pickle(
+            {
+                "params": reference,
+                "samples": reference[:, None, :]
+                + offset
+                + np.random.normal(0, 1, (100, 1000, 3)),
+            },
+            path,
+        )
         paths.append(str(path))
 
     csv = tmp_path / "result.csv"

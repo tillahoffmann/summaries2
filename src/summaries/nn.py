@@ -11,16 +11,19 @@ class NegLogProbLoss(nn.Module):
     """
     Measure the negative log probability loss.
     """
+
     def __init__(self, reduction: Literal["none", "mean", "sum"] = "mean") -> None:
         super().__init__()
         self.reduction = reduction
 
     def forward(self, distribution: Distribution, params: Tensor) -> Tensor:
-        loss = - distribution.log_prob(params)
+        loss = -distribution.log_prob(params)
         expected_shape = distribution.batch_shape + distribution.event_shape
         if params.shape != expected_shape:
-            warnings.warn(f"Possible mismatch between parameter shape {params.shape} and "
-                          f"distribution shape {expected_shape}. Did you broadcast intentionally?")
+            warnings.warn(
+                f"Possible mismatch between parameter shape {params.shape} and "
+                f"distribution shape {expected_shape}. Did you broadcast intentionally?"
+            )
         if self.reduction == "mean":
             return loss.mean()
         elif self.reduction == "sum":
@@ -35,6 +38,7 @@ class MeanPool(nn.Module):
     """
     Mean-pool features.
     """
+
     def __init__(self, axis: int = -2) -> None:
         super().__init__()
         self.axis = axis
@@ -47,6 +51,7 @@ class SequentialWithKeywords(nn.Module):
     """
     Apply modules sequentially with optional keyword arguments.
     """
+
     def __init__(self, *layers: nn.Module) -> None:
         super().__init__()
         self.layers = nn.ModuleList(layers)
@@ -64,4 +69,4 @@ class MeanPoolByGraph(nn.Module):
         super().__init__(*args, **kwargs)
 
     def forward(self, x: torch.Tensor, batch: torch.LongTensor) -> torch.Tensor:
-        return torch_scatter.scatter(x, batch, dim=0, reduce='mean')
+        return torch_scatter.scatter(x, batch, dim=0, reduce="mean")
